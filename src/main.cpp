@@ -28,22 +28,30 @@
 #include <chrono>
 #include <limits>
 
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
+
 glm::vec3 cameraMovement;
 std::vector<RigidBody> rigidBodies;
 Mesh* globalEarthMesh;
 float deltaT{};
 bool impulseModel{false};
 
+bool captureMouse{false};
+
 void cursorCallback(GLFWwindow* window, double x, double y) {
-    Scene* scene{static_cast<Scene*>(glfwGetWindowUserPointer(window))};
+    if (!captureMouse) {
+        Scene* scene{static_cast<Scene*>(glfwGetWindowUserPointer(window))};
 
-    constexpr static float sensitivity{5.0f};
+        constexpr static float sensitivity{5.0f};
 
-    glm::quat leftRightRotation{glm::angleAxis(glm::radians<float>(deltaT * x * sensitivity), glm::vec3{0.0f, 1.0f, 0.0f})};
-    glm::quat upDownRotation{glm::angleAxis(glm::radians<float>(deltaT * y * sensitivity), glm::vec3{1.0f, 0.0f, 0.0f})};
-    
-    scene->getCamera().setRotation(upDownRotation * scene->getCamera().getRotation() * leftRightRotation);
-    glfwSetCursorPos(window, 0, 0);
+        glm::quat leftRightRotation{glm::angleAxis(glm::radians<float>(deltaT * x * sensitivity), glm::vec3{0.0f, 1.0f, 0.0f})};
+        glm::quat upDownRotation{glm::angleAxis(glm::radians<float>(deltaT * y * sensitivity), glm::vec3{1.0f, 0.0f, 0.0f})};
+        
+        scene->getCamera().setRotation(upDownRotation * scene->getCamera().getRotation() * leftRightRotation);
+        glfwSetCursorPos(window, 0, 0);
+    }
 }
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -84,6 +92,17 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 rigidBodies.push_back(rigidBody);*/
                 return;
             }
+            case GLFW_KEY_LEFT_CONTROL:
+                if (captureMouse) {
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                    //glfwSetCursorPosCallback(window, cursorCallback);
+                    captureMouse = false;
+                }
+                else {
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                    //glfwSetCursorPosCallback(window, nullptr);
+                    captureMouse = true;
+                }
             case GLFW_KEY_TAB:
                 impulseModel = !impulseModel;
                 return;
@@ -115,6 +134,15 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 return;
         }
     }
+}
+
+void initImgui(GLFWwindow* window) {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
 }
 
 int main(int argc, char** argv) {
@@ -220,6 +248,8 @@ int main(int argc, char** argv) {
 
     glfwSetWindowUserPointer(window, &scene);
 
+    initImgui(window);
+
     double lastTime{std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::system_clock::now().time_since_epoch()).count()};
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -239,10 +269,27 @@ int main(int argc, char** argv) {
 
         scene.render();
 
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::Begin("Interface");
+        //ImGui::ShowDemoWindow();
+        ImGui::Separator();
+        ImGui::Text("Welcome to this TP about Cameras! Press escape to close the exe");
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         glfwSwapBuffers(window);
 
         lastTime = currentTime;
     }
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     meshShaderProgram.destroy();
 

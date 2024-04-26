@@ -12,7 +12,7 @@ OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 
 CXXFLAGS = -Ofast -std=c++23 $(INCLUDE_DIR)
 
-LIBS = -lglfw3 -lGL -lGLEW
+LIBS = -lglfw3 -lGL -lGLEW -limgui
 
 TARGET = main
 
