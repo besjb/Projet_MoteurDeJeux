@@ -193,7 +193,7 @@ int main(int argc, char** argv) {
         16.0f
     };
 
-    Mesh earthMesh{Mesh::loadFromFile("./data/cube.obj", &earthMaterial)};
+    Mesh earthMesh{Mesh::loadFromFile("./models/cube.obj", &earthMaterial)};
     globalEarthMesh = &earthMesh;
 
     HeightMap heightMap{HeightMap::loadFromFile("./textures/heightmaps/heightmap.jpeg", &terrainMaterial, 64, 64, 0.0f)};
