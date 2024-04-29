@@ -1,6 +1,6 @@
 #include "Transform.hpp"
 
-Transform::Transform(const glm::vec3& translation, const glm::quat& rotation, float scale) :
+Transform::Transform(const glm::vec3& translation, const glm::quat& rotation, const glm::vec3& scale) :
     translation{translation},
     rotation{rotation},
     scaleFactor{scale}
@@ -23,13 +23,13 @@ Transform& Transform::rotate(const glm::quat& rotation) {
     return *this;
 }
 
-Transform& Transform::scale(float scale) {
+Transform& Transform::scale(const glm::vec3& scale) {
     translation *= scale;
     scaleFactor *= scale;
     return *this;
 }
 
-Transform& Transform::setScale(float scale) {
+Transform& Transform::setScale(const glm::vec3& scale) {
     scaleFactor = scale;
     return *this;
 }
@@ -76,14 +76,14 @@ glm::quat Transform::getRotation() const {
     return rotation;
 }
 
-float Transform::getScale() const {
+glm::vec3 Transform::getScale() const {
     return scaleFactor;
 }
 
 glm::mat4 Transform::toMat4() const {
     glm::mat4 translate{glm::translate(glm::mat4{1.0}, translation)};
     glm::mat4 rotate{glm::mat4_cast(rotation)};
-    glm::mat4 scale{glm::scale(glm::mat4{1.0}, glm::vec3{scaleFactor, scaleFactor, scaleFactor})};
+    glm::mat4 scale{glm::scale(glm::mat4{1.0}, scaleFactor)};
 
     return translate * rotate * scale;
 }

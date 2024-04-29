@@ -8,17 +8,17 @@
 class Transform {
 public:
 
-    Transform(const glm::vec3& translation = {}, const glm::quat& rotation = glm::identity<glm::quat>(), float scale = 1.0f);
+    Transform(const glm::vec3& translation = {}, const glm::quat& rotation = glm::identity<glm::quat>(), const glm::vec3& scale = {1.0f, 1.0f, 1.0f});
 
     Transform(const Transform& transform);
 
-    Transform& scale(float scale);
+    Transform& scale(const glm::vec3& scale);
 
     Transform& rotate(const glm::quat& rotation);
 
     Transform& translate(const glm::vec3& translation);
 
-    Transform& setScale(float scale);
+    Transform& setScale(const glm::vec3& scale);
 
     Transform& setRotation(const glm::quat& rotation);
 
@@ -34,7 +34,7 @@ public:
 
     glm::quat getRotation() const;
 
-    float getScale() const;
+    glm::vec3 getScale() const;
 
     glm::mat4 toMat4() const;
 
@@ -42,6 +42,6 @@ private:
 
     glm::vec3 translation;
     glm::quat rotation;
-    float scaleFactor;
+    glm::vec3 scaleFactor;
 
 };
