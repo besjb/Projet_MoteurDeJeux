@@ -1,5 +1,6 @@
 #pragma once
 #include "GeometryUtils.hpp"
+#include "Scene.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <vector>
@@ -241,6 +242,7 @@ public:
     }
 
     RigidBody(
+        TransformTree* transformTree,
         Collider* collider,
         float mass = 1.0f,
         PhysicsMaterial material = {},
@@ -257,6 +259,7 @@ public:
 
     void tick(const std::vector<ForceField::Ref>& forceFields, float delta);
 
+    TransformTree* getTransformTree() const {return transformTree;}
     int getLayer() const {return layer;}
     glm::vec3 getPosition() const {return position;}
     glm::vec3 getVelocity() const {return isStatic() ? glm::vec3(0.0f, 0.0f, 0.0f) : velocity;}
@@ -268,6 +271,7 @@ public:
     Collider* getCollider() const {return collider;}
     PhysicsMaterial getPhysicsMaterial() const {return material;}
 
+    void setTransformTree(TransformTree* transformTree) {this->transformTree = transformTree;}
     void setLayer(int layer) {this->layer = layer;}
     void setPosition(const glm::vec3 position) {this->position = position;}
     void setVelocity(const glm::vec3 velocity) {this->velocity = velocity;}
@@ -283,6 +287,7 @@ public:
 
 private:
 
+    TransformTree* transformTree;
     Collider* collider;
     float mass;
     PhysicsMaterial material;

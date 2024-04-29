@@ -185,19 +185,19 @@ std::vector<PhysicsEngine::CollidingPair> PhysicsEngine::sweepAndPrune() const {
 
 std::vector<PhysicsEngine::CollidingPair> PhysicsEngine::getPairs(bool continuous) const {
     std::vector<PhysicsEngine::CollidingPair> collidingPairs;
-    /*for (std::size_t i = 0; i < rigidBodies.size(); ++i) {
+    for (std::size_t i = 0; i < rigidBodies.size(); ++i) {
         for (std::size_t j = i + 1; j < rigidBodies.size(); ++j) {
             if (!(rigidBodies[i]->isStatic() && rigidBodies[j]->isStatic()) && doLayersCollide(rigidBodies[i]->getLayer(), rigidBodies[j]->getLayer())) {
                 collidingPairs.push_back(std::make_pair(rigidBodies[i], rigidBodies[j]));
             }
         }
-    }*/
-    for (PhysicsEngine::CollidingPair& collidingPair : sweepAndPrune()) {
+    }
+    /*for (PhysicsEngine::CollidingPair& collidingPair : sweepAndPrune()) {
         auto [body1, body2] = collidingPair;
         if (!(body1->isStatic() && body2->isStatic()) && doLayersCollide(body1->getLayer(), body2->getLayer())) {
             collidingPairs.push_back(collidingPair);
         }
-    }
+    }*/
     return collidingPairs;
 }
 
@@ -254,6 +254,7 @@ PhysicsMaterial::~PhysicsMaterial() {
 /*************/
 
 RigidBody::RigidBody(
+    TransformTree* transformTree,
     Collider* collider,
     float mass,
     PhysicsMaterial material,
@@ -265,6 +266,7 @@ RigidBody::RigidBody(
     const glm::vec3& angularVelocity,
     const glm::vec3& torque
 ) :
+    transformTree(transformTree),
     collider(collider),
     mass(mass),
     material(material),
@@ -282,20 +284,22 @@ RigidBody::~RigidBody() {
 }
 
 void RigidBody::tick(const std::vector<ForceField::Ref>& forcesFields, float delta) {
-    if (isStatic()) {
-        return;
-    }
+    if (!isStatic()) {
+        glm::vec3 additionalAcceleration = glm::vec3(0.0f);
+        for (const ForceField::Ref& forceField : forcesFields) {
+            additionalAcceleration += forceField->getAcceleration(position);
+        }
+        velocity += delta * (acceleration + additionalAcceleration);
+        position += delta * velocity;
 
-    // todo force field
-    glm::vec3 additionalAcceleration = glm::vec3(0.0f);
-    for (const ForceField::Ref& forceField : forcesFields) {
-        additionalAcceleration += forceField->getAcceleration(position);
-    }
-    velocity += delta * (acceleration + additionalAcceleration);
-    position += delta * velocity;
+        angularVelocity += torque;
+        rotation = glm::quat{delta * angularVelocity} * rotation;
+    }    
 
-    angularVelocity += torque;
-    rotation = glm::quat{delta * angularVelocity} * rotation;
+    if (transformTree != nullptr) {
+        transformTree->transform.setTranslation(position);
+        transformTree->transform.setRotation(rotation);
+    }
 }
 
 std::optional<IntersectionInfo> Collider::getCollisionInfo(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const Collider* collider, bool continuous) {

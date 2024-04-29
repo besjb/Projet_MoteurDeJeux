@@ -35,10 +35,13 @@
 glm::vec3 cameraMovement;
 std::vector<RigidBody> rigidBodies;
 Mesh* globalEarthMesh;
+Mesh* globalMoonMesh;
 float deltaT{};
 bool impulseModel{false};
 
 bool captureMouse{false};
+PhysicsEngine* physicsEnginePointer;
+SphereCollider cubeCollider{0.4f};
 
 void cursorCallback(GLFWwindow* window, double x, double y) {
     if (!captureMouse) {
@@ -80,16 +83,23 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 cameraMovement.y += 3.0f;
                 return;
             case GLFW_KEY_SPACE: {
-                /*TransformTree* tree{scene->getRootTransformTree()->addChild({{}, glm::identity<glm::quat>(), 0.2f})->addObject(globalEarthMesh)};
-                glm::vec3 forward{glm::vec3{0.0f, 0.0f, -1.0f} * scene->getCamera().getRotation()};
-                RigidBody rigidBody{
+                TransformTree* tree{scene->getRootTransformTree()->addChild({{}, glm::identity<glm::quat>(), glm::vec3{0.4f, 0.4f, 0.4f}})->addObject(globalMoonMesh)};
+                glm::vec3 forward{glm::vec3{0.0f, 0.0f, -1.0} * scene->getCamera().getRotation()};
+
+                RigidBody::Ref cube{RigidBody::make(
                     tree,
+                    &cubeCollider,
+                    1.0f,
+                    PhysicsMaterial{0.0f, 0.9f, 0.0f, 0.0f},
+                    0,
                     scene->getCamera().getPosition(),
                     8.0f * forward,
+                    glm::vec3{},
                     glm::conjugate(scene->getCamera().getRotation()),
-                    impulseModel ? glm::vec3{2.0f, 2.0f, 0.0f} : glm::vec3{0.0f, 0.0f, 0.0f}
-                };
-                rigidBodies.push_back(rigidBody);*/
+                    glm::vec3{2.0f, 2.0f, 0.0f}
+                )};
+
+                physicsEnginePointer->addRigidBody(cube);
                 return;
             }
             case GLFW_KEY_LEFT_CONTROL:
@@ -202,29 +212,20 @@ int main(int argc, char** argv) {
         16.0f
     };
 
-    Shader terrainVertexShader{"./shaders/terrain/heightmap.vert", Shader::Type::VERTEX};
-    Shader terrainFragmentShader{"./shaders/terrain/heightmap.frag", Shader::Type::FRAGMENT};
-
-    ShaderProgram terrainShaderProgram;
-    terrainShaderProgram.attachShader(terrainVertexShader);
-    terrainShaderProgram.attachShader(terrainFragmentShader);
-    terrainShaderProgram.link();
-
-    HeightMapMaterial terrainMaterial{
-        &terrainShaderProgram,
-        loadTexture("textures/terrain/grass.png"),
-        loadTexture("textures/terrain/rock.png"),
-        loadTexture("textures/terrain/snowrocks.png"),
-        {0.15f, 0.15f, 0.15f},
-        {1.0f, 1.0f, 1.0f},
-        {0.2f, 0.2f, 0.2f},
-        16.0f
-    };
-
     Mesh earthMesh{Mesh::loadFromFile("./models/cube.obj", &earthMaterial)};
     globalEarthMesh = &earthMesh;
 
-    HeightMap heightMap{HeightMap::loadFromFile("./textures/heightmaps/heightmap.jpeg", &terrainMaterial, 64, 64, 0.0f)};
+    MeshMaterial moonMaterial{
+        &meshShaderProgram,
+        loadTexture("textures/solar/moon.jpg"),
+        {0.15f, 0.15f, 0.15f},
+        {1.0f, 1.0f, 1.0f},
+        {0.3f, 0.3f, 0.3f},
+        16.0f
+    };
+
+    Mesh moonMesh{Mesh::loadFromFile("./models/sphere.obj", &moonMaterial)};
+    globalMoonMesh = &moonMesh;
 
     Scene scene{
         // Source de lumière
@@ -241,14 +242,84 @@ int main(int argc, char** argv) {
         }
     };
 
-    scene.getRootTransformTree()
+    /*scene.getRootTransformTree()
         ->addChild({{}, {}, 1.0f})
             ->addObject(&heightMap)
-            ->getParent();
+            ->getParent();*/
 
     glfwSetWindowUserPointer(window, &scene);
 
     initImgui(window);
+
+    PhysicsEngine physicsEngine;
+    physicsEnginePointer = &physicsEngine;
+    ForceField::Ref gravity{ForceField::global(ForceField::uniformForceField({0.0f, -9.81f, 0.0f}))};
+
+    physicsEngine.addForceField(gravity);
+
+    AABBCollider planeCollider{{16.0f, 1.0f, 16.0f}};
+
+    TransformTree* arenaTree{scene.getRootTransformTree()};
+    RigidBody::Ref plane{RigidBody::make(
+        arenaTree->addChild({{}, glm::identity<glm::quat>(), {16.0f, 1.0f, 16.0f}})->addObject(&earthMesh),
+        &planeCollider,
+        -1.0f,
+        PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
+        0
+    )};
+    physicsEngine.addRigidBody(plane);
+
+    RigidBody::Ref wall1{RigidBody::make(
+        arenaTree->addChild({{}, glm::identity<glm::quat>(), {16.0f, 1.0f, 16.0f}})->addObject(&earthMesh),
+        &planeCollider,
+        -1.0f,
+        PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
+        0,
+        glm::vec3{16.0f, 0.0f, 0.0f},
+        glm::vec3{0.0f, 0.0f, 0.0f},
+        glm::vec3{0.0f, 0.0f, 0.0f},
+        glm::angleAxis(glm::radians(90.0f), glm::vec3{0.0f, 0.0f, 1.0f})
+    )};
+    physicsEngine.addRigidBody(wall1);
+
+    RigidBody::Ref wall2{RigidBody::make(
+        arenaTree->addChild({{}, glm::identity<glm::quat>(), {16.0f, 1.0f, 16.0f}})->addObject(&earthMesh),
+        &planeCollider,
+        -1.0f,
+        PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
+        0,
+        glm::vec3{-16.0f, 0.0f, 0.0f},
+        glm::vec3{0.0f, 0.0f, 0.0f},
+        glm::vec3{0.0f, 0.0f, 0.0f},
+        glm::angleAxis(glm::radians(90.0f), glm::vec3{0.0f, 0.0f, 1.0f})
+    )};
+    physicsEngine.addRigidBody(wall2);
+
+    RigidBody::Ref wall3{RigidBody::make(
+        arenaTree->addChild({{}, glm::identity<glm::quat>(), {16.0f, 1.0f, 16.0f}})->addObject(&earthMesh),
+        &planeCollider,
+        -1.0f,
+        PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
+        0,
+        glm::vec3{0.0f, 0.0f, 16.0f},
+        glm::vec3{0.0f, 0.0f, 0.0f},
+        glm::vec3{0.0f, 0.0f, 0.0f},
+        glm::angleAxis(glm::radians(90.0f), glm::vec3{1.0f, 0.0f, 0.0f})
+    )};
+    physicsEngine.addRigidBody(wall3);
+
+    RigidBody::Ref wall4{RigidBody::make(
+        arenaTree->addChild({{}, glm::identity<glm::quat>(), {16.0f, 1.0f, 16.0f}})->addObject(&earthMesh),
+        &planeCollider,
+        -1.0f,
+        PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
+        0,
+        glm::vec3{0.0f, 0.0f, -16.0f},
+        glm::vec3{0.0f, 0.0f, 0.0f},
+        glm::vec3{0.0f, 0.0f, 0.0f},
+        glm::angleAxis(glm::radians(90.0f), glm::vec3{1.0f, 0.0f, 0.0f})
+    )};
+    physicsEngine.addRigidBody(wall4);
 
     double lastTime{std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::system_clock::now().time_since_epoch()).count()};
     while (!glfwWindowShouldClose(window)) {
@@ -263,10 +334,7 @@ int main(int argc, char** argv) {
         glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        /*for (RigidBody& rigidBody : rigidBodies) {
-            rigidBody.update(deltaT);
-        }*/
-
+        physicsEngine.tick(deltaT);
         scene.render();
 
         ImGui_ImplOpenGL3_NewFrame();
