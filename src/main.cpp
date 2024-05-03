@@ -14,6 +14,7 @@
 #include "Utility.hpp"
 #include "LightSource.hpp"
 #include "Physics.hpp"
+#include "Controls.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
@@ -35,13 +36,12 @@
 glm::vec3 cameraMovement;
 std::vector<RigidBody> rigidBodies;
 Mesh* globalEarthMesh;
-Mesh* globalMoonMesh;
+Mesh* globalCarMesh;
 float deltaT{};
 bool impulseModel{false};
 
 bool captureMouse{false};
 PhysicsEngine* physicsEnginePointer;
-SphereCollider cubeCollider{0.4f};
 
 void cursorCallback(GLFWwindow* window, double x, double y) {
     if (!captureMouse) {
@@ -54,95 +54,6 @@ void cursorCallback(GLFWwindow* window, double x, double y) {
         
         scene->getCamera().setRotation(upDownRotation * scene->getCamera().getRotation() * leftRightRotation);
         glfwSetCursorPos(window, 0, 0);
-    }
-}
-
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    Scene* scene{static_cast<Scene*>(glfwGetWindowUserPointer(window))};
-    if (action == GLFW_PRESS) {
-        switch (key) {
-            case GLFW_KEY_ESCAPE:
-                glfwSetWindowShouldClose(window, GLFW_TRUE);
-                return;
-            case GLFW_KEY_W:
-                cameraMovement.z -= 3.0f;
-                return;
-            case GLFW_KEY_S:
-                cameraMovement.z += 3.0f;
-                return;
-            case GLFW_KEY_A:
-                cameraMovement.x -= 3.0f;
-                return;
-            case GLFW_KEY_D:
-                cameraMovement.x += 3.0f;
-                return;
-            case GLFW_KEY_Q:
-                cameraMovement.y -= 3.0f;
-                return;
-            case GLFW_KEY_E:
-                cameraMovement.y += 3.0f;
-                return;
-            case GLFW_KEY_SPACE: {
-                TransformTree* tree{scene->getRootTransformTree()->addChild({{}, glm::identity<glm::quat>(), glm::vec3{0.4f, 0.4f, 0.4f}})->addObject(globalMoonMesh)};
-                glm::vec3 forward{glm::vec3{0.0f, 0.0f, -1.0} * scene->getCamera().getRotation()};
-
-                RigidBody::Ref cube{RigidBody::make(
-                    tree,
-                    &cubeCollider,
-                    1.0f,
-                    PhysicsMaterial{0.0f, 0.9f, 0.0f, 0.0f},
-                    0,
-                    scene->getCamera().getPosition(),
-                    8.0f * forward,
-                    glm::vec3{},
-                    glm::conjugate(scene->getCamera().getRotation()),
-                    glm::vec3{2.0f, 2.0f, 0.0f}
-                )};
-
-                physicsEnginePointer->addRigidBody(cube);
-                return;
-            }
-            case GLFW_KEY_LEFT_CONTROL:
-                if (captureMouse) {
-                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                    //glfwSetCursorPosCallback(window, cursorCallback);
-                    captureMouse = false;
-                }
-                else {
-                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-                    //glfwSetCursorPosCallback(window, nullptr);
-                    captureMouse = true;
-                }
-            case GLFW_KEY_TAB:
-                impulseModel = !impulseModel;
-                return;
-            default:
-                return;
-        }
-    }
-    else if (action == GLFW_RELEASE) {
-        switch (key) {
-            case GLFW_KEY_W:
-                cameraMovement.z += 3.0f;
-                return;
-            case GLFW_KEY_S:
-                cameraMovement.z -= 3.0f;
-                return;
-            case GLFW_KEY_A:
-                cameraMovement.x += 3.0f;
-                return;
-            case GLFW_KEY_D:
-                cameraMovement.x -= 3.0f;
-                return;
-            case GLFW_KEY_Q:
-                cameraMovement.y += 3.0f;
-                return;
-            case GLFW_KEY_E:
-                cameraMovement.y -= 3.0f;
-                return;
-            default:
-                return;
-        }
     }
 }
 
@@ -215,17 +126,17 @@ int main(int argc, char** argv) {
     Mesh earthMesh{Mesh::loadFromFile("./models/cube.obj", &earthMaterial)};
     globalEarthMesh = &earthMesh;
 
-    MeshMaterial moonMaterial{
+    MeshMaterial carMaterial{
         &meshShaderProgram,
-        loadTexture("textures/solar/moon.jpg"),
+        loadTexture("models/octane-rocket-league-car/textures/Octane_Chasis_Map.png"),
         {0.15f, 0.15f, 0.15f},
         {1.0f, 1.0f, 1.0f},
         {0.3f, 0.3f, 0.3f},
         16.0f
     };
 
-    Mesh moonMesh{Mesh::loadFromFile("./models/sphere.obj", &moonMaterial)};
-    globalMoonMesh = &moonMesh;
+    Mesh carMesh{Mesh::loadFromFile("./models/Octane.obj", &carMaterial)};
+    globalCarMesh = &carMesh;
 
     Scene scene{
         // Source de lumière
@@ -277,7 +188,6 @@ int main(int argc, char** argv) {
         0,
         glm::vec3{16.0f, 0.0f, 0.0f},
         glm::vec3{0.0f, 0.0f, 0.0f},
-        glm::vec3{0.0f, 0.0f, 0.0f},
         glm::angleAxis(glm::radians(90.0f), glm::vec3{0.0f, 0.0f, 1.0f})
     )};
     physicsEngine.addRigidBody(wall1);
@@ -289,7 +199,6 @@ int main(int argc, char** argv) {
         PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
         0,
         glm::vec3{-16.0f, 0.0f, 0.0f},
-        glm::vec3{0.0f, 0.0f, 0.0f},
         glm::vec3{0.0f, 0.0f, 0.0f},
         glm::angleAxis(glm::radians(90.0f), glm::vec3{0.0f, 0.0f, 1.0f})
     )};
@@ -303,7 +212,6 @@ int main(int argc, char** argv) {
         0,
         glm::vec3{0.0f, 0.0f, 16.0f},
         glm::vec3{0.0f, 0.0f, 0.0f},
-        glm::vec3{0.0f, 0.0f, 0.0f},
         glm::angleAxis(glm::radians(90.0f), glm::vec3{1.0f, 0.0f, 0.0f})
     )};
     physicsEngine.addRigidBody(wall3);
@@ -315,7 +223,6 @@ int main(int argc, char** argv) {
         PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
         0,
         glm::vec3{0.0f, 0.0f, -16.0f},
-        glm::vec3{0.0f, 0.0f, 0.0f},
         glm::vec3{0.0f, 0.0f, 0.0f},
         glm::angleAxis(glm::radians(90.0f), glm::vec3{1.0f, 0.0f, 0.0f})
     )};

@@ -1,3 +1,6 @@
 /obj/*
 !/obj/.gitkeep
 /main
+/imgui.ini
+/main.exe
+.vscode

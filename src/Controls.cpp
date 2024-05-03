@@ -1,14 +1,20 @@
 #include "Controls.hpp"
 #include "Scene.hpp"
 #include "Mesh.hpp"
+#include "Physics.hpp"
 
 #include <glm/glm.hpp>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
 extern bool captureMouse;
-extern Mesh* globalEarthMesh;
+extern Mesh* globalCarMesh;
 extern glm::vec3 cameraMovement;
+
+extern PhysicsEngine* physicsEnginePointer;
+
+SphereCollider cubeCollider{0.4f};
+
 glm::vec3 mouv = glm::vec3(0.,0.,0.);
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -31,10 +37,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             case GLFW_KEY_D:
                 moveLeftCamera();
                 return;
-            case GLFW_KEY_Q:
+            case GLFW_KEY_E:
                 moveUpCamera();
                 return;
-            case GLFW_KEY_E:
+            case GLFW_KEY_Q:
                 moveDownCamera();
                 return;
             case GLFW_KEY_UP:
@@ -50,16 +56,24 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 moveRightCar(tree);
                 return;
             case GLFW_KEY_SPACE: {
-                tree = scene->getRootTransformTree()->addChild({{}, glm::identity<glm::quat>(), 0.2f})->addObject(globalEarthMesh);
-                glm::vec3 forward{glm::vec3{0.0f, 0.0f, -1.0f} * scene->getCamera().getRotation()};
-                /*RigidBody rigidBody{
+                //tree = scene->getRootTransformTree()->addChild({{}, glm::identity<glm::quat>(), glm::vec3{0.2f, 0.2f, 0.2f}})->addObject(globalCarMesh);
+                //glm::vec3 forward{glm::vec3{0.0f, 0.0f, -1.0f} * scene->getCamera().getRotation()};
+                tree = scene->getRootTransformTree()->addChild({{}, glm::identity<glm::quat>(), glm::vec3{0.01f, 0.01f, 0.01f}})->addObject(globalCarMesh);
+                glm::vec3 forward{glm::vec3{0.0f, 0.0f, -1.0} * scene->getCamera().getRotation()};
+
+                RigidBody::Ref cube{RigidBody::make(
                     tree,
+                    &cubeCollider,
+                    1.0f,
+                    PhysicsMaterial{0.0f, 0.9f, 0.0f, 0.0f},
+                    0,
                     scene->getCamera().getPosition(),
                     8.0f * forward,
                     glm::conjugate(scene->getCamera().getRotation()),
-                    impulseModel ? glm::vec3{2.0f, 2.0f, 0.0f} : glm::vec3{0.0f, 0.0f, 0.0f}
-                };
-                rigidBodies.push_back(rigidBody);*/
+                    glm::vec3{2.0f, 2.0f, 0.0f}
+                )};
+
+                physicsEnginePointer->addRigidBody(cube);
                 return;
             }
             case GLFW_KEY_LEFT_CONTROL:
@@ -94,10 +108,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             case GLFW_KEY_D:
                 moveRightCamera();
                 return;
-            case GLFW_KEY_Q:
+            case GLFW_KEY_E:
                 moveDownCamera();
                 return;
-            case GLFW_KEY_E:
+            case GLFW_KEY_Q:
                 moveUpCamera();
                 return;
             case GLFW_KEY_UP:

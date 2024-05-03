@@ -261,10 +261,8 @@ RigidBody::RigidBody(
     int layer,
     const glm::vec3& position,
     const glm::vec3& velocity,
-    const glm::vec3& acceleration,
     const glm::quat& rotation,
-    const glm::vec3& angularVelocity,
-    const glm::vec3& torque
+    const glm::vec3& angularVelocity
 ) :
     transformTree(transformTree),
     collider(collider),
@@ -273,26 +271,24 @@ RigidBody::RigidBody(
     layer(layer),
     position(position),
     velocity(velocity),
-    acceleration(acceleration),
     rotation(rotation),
-    angularVelocity(angularVelocity),
-    torque(torque)
+    angularVelocity(angularVelocity)
 {
 }
 
 RigidBody::~RigidBody() {
 }
 
-void RigidBody::tick(const std::vector<ForceField::Ref>& forcesFields, float delta) {
+void RigidBody::tick(const std::vector<ForceField::Ref>& forceFields, float delta) {
     if (!isStatic()) {
         glm::vec3 additionalAcceleration = glm::vec3(0.0f);
-        for (const ForceField::Ref& forceField : forcesFields) {
+        for (const ForceField::Ref& forceField : forceFields) {
             additionalAcceleration += forceField->getAcceleration(position);
         }
-        velocity += delta * (acceleration + additionalAcceleration);
-        position += delta * velocity;
+        //velocity += delta * (acceleration + additionalAcceleration);
+        //position += delta * velocity;
+        integrateMotion(forceFields, delta);
 
-        angularVelocity += torque;
         rotation = glm::quat{delta * angularVelocity} * rotation;
     }    
 
@@ -300,6 +296,24 @@ void RigidBody::tick(const std::vector<ForceField::Ref>& forcesFields, float del
         transformTree->transform.setTranslation(position);
         transformTree->transform.setRotation(rotation);
     }
+}
+
+glm::vec3 RigidBody::getAccelerationAtPosition(const std::vector<ForceField::Ref>& forceFields) const {
+    glm::vec3 acceleration = glm::vec3(0.0f);
+    for (const ForceField::Ref& forceField : forceFields) {
+        acceleration += forceField->getAcceleration(position);
+    }
+    return acceleration;
+}
+
+void RigidBody::integrateMotion(const std::vector<ForceField::Ref>& forceFields, float delta) {
+    glm::vec3 acceleration{getAccelerationAtPosition(forceFields)};
+
+    position += velocity * delta + 0.5f * acceleration * delta * delta;
+    
+    glm::vec3 newAcceleration{getAccelerationAtPosition(forceFields)};
+        
+    velocity += 0.5f * (acceleration + newAcceleration) * delta;
 }
 
 std::optional<IntersectionInfo> Collider::getCollisionInfo(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const Collider* collider, bool continuous) {

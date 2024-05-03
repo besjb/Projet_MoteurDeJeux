@@ -249,10 +249,8 @@ public:
         int layer = 0,
         const glm::vec3& position = {},
         const glm::vec3& velocity = {},
-        const glm::vec3& acceleration = {},
         const glm::quat& rotation = glm::identity<glm::quat>(),
-        const glm::vec3& angularVelocity = {},
-        const glm::vec3& torque = {}
+        const glm::vec3& angularVelocity = {}
     );
 
     ~RigidBody();
@@ -263,10 +261,8 @@ public:
     int getLayer() const {return layer;}
     glm::vec3 getPosition() const {return position;}
     glm::vec3 getVelocity() const {return isStatic() ? glm::vec3(0.0f, 0.0f, 0.0f) : velocity;}
-    glm::vec3 getAcceleration() const {return isStatic() ? glm::vec3(0.0f, 0.0f, 0.0f) : acceleration;}
     glm::quat getRotation() const {return rotation;}
     glm::vec3 getAngularVelocity() const {return canRotate() ? angularVelocity : glm::vec3(0.0f, 0.0f, 0.0f);}
-    glm::vec3 getTorque() const {return canRotate() ? torque : glm::vec3(0.0f, 0.0f, 0.0f);}
     float getMass() const {return isStatic() ? std::numeric_limits<float>::infinity() : mass;}
     Collider* getCollider() const {return collider;}
     PhysicsMaterial getPhysicsMaterial() const {return material;}
@@ -275,10 +271,8 @@ public:
     void setLayer(int layer) {this->layer = layer;}
     void setPosition(const glm::vec3 position) {this->position = position;}
     void setVelocity(const glm::vec3 velocity) {this->velocity = velocity;}
-    void setAcceleration(const glm::vec3& acceleration) {this->acceleration = acceleration;}
     void setRotation(const glm::quat& rotation) {this->rotation = rotation;}
     void setAngularVelocity(const glm::vec3& angularVelocity) {this->angularVelocity = angularVelocity;}
-    void setTorque(const glm::vec3& torque) {this->torque = torque;}
     void setMass(float mass) {this->mass = mass;}
     void setMaterial(const PhysicsMaterial material) {this->material = material;}
 
@@ -295,11 +289,13 @@ private:
 
     glm::vec3 position;
     glm::vec3 velocity;
-    glm::vec3 acceleration;
 
     glm::quat rotation;
     glm::vec3 angularVelocity;
-    glm::vec3 torque;
+
+    glm::vec3 getAccelerationAtPosition(const std::vector<ForceField::Ref>& forceFields) const;
+
+    void integrateMotion(const std::vector<ForceField::Ref>& forceFields, float delta);
 
 };
 
