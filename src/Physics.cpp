@@ -8,6 +8,12 @@
 #include <algorithm>
 #include <iostream>
 
+#include "Scene.hpp"
+#include "Mesh.hpp"
+
+extern Mesh* globalEarthMesh;
+extern Scene* scenePointer;
+
 void PhysicsEngine::tick(float delta) {
     for (RigidBody::Ref& rigidBody : rigidBodies) {
         rigidBody->tick(getEffectiveForceFields(rigidBody), delta);
@@ -17,9 +23,8 @@ void PhysicsEngine::tick(float delta) {
     constexpr bool continuous{false};
 
     for (const CollidingPair& pair : getPairs(continuous)) {
-        std::optional<IntersectionInfo> intersectionInfoOptional = pair.first->getCollider()->getCollisionInfo(pair.first->getPosition(), pair.second->getPosition(), pair.first->getRotation(), pair.second->getRotation(), pair.second->getCollider(), continuous);
-        if (intersectionInfoOptional.has_value()) {
-            const IntersectionInfo intersectionInfo = intersectionInfoOptional.value();
+        const geometry::DiscreteIntersectionInfo intersectionInfo = pair.first->getCollider()->getCollisionInfo(pair.first->getPosition(), pair.second->getPosition(), pair.first->getRotation(), pair.second->getRotation(), pair.second->getCollider(), continuous);
+        if (intersectionInfo.intersects()) {
             if (!continuous) {
                 RigidBody::Ref body1 = pair.first;
                 RigidBody::Ref body2 = pair.second;
@@ -34,46 +39,45 @@ void PhysicsEngine::tick(float delta) {
                 else {
                     massRatio = body1->getMass() / (body1->getMass() + body2->getMass());
                 }
-                body1->setPosition(body1->getPosition() + intersectionInfo.penetration * intersectionInfo.normal * massRatio);
-                body2->setPosition(body2->getPosition() - intersectionInfo.penetration * intersectionInfo.normal * (1.0f - massRatio));
+                body1->setPosition(body1->getPosition() + intersectionInfo.getPenetration() * intersectionInfo.getNormal() * massRatio);
+                body2->setPosition(body2->getPosition() - intersectionInfo.getPenetration() * intersectionInfo.getNormal() * (1.0f - massRatio));
 
-                // const glm::vec3 collisionPoint = intersectionInfo.collisionPoint + intersectionInfo.normal * (massRatio - 0.5f);
+                const glm::vec3 collisionPoint = intersectionInfo.getIntersectionPolygon()[0] + intersectionInfo.getNormal() * intersectionInfo.getPenetration() * (massRatio - 0.5f);
+                //scenePointer->getRootTransformTree()->addChild({collisionPoint, glm::identity<glm::quat>(), glm::vec3(0.04f)})->addObject(globalEarthMesh);
 
-                const glm::vec3 velocity1 = body1->getVelocity();// + glm::cross(body1->getAngularVelocity(), collisionPoint - body1->getPosition());
-                const glm::vec3 velocity2 = body2->getVelocity();// + glm::cross(body2->getAngularVelocity(), collisionPoint - body2->getPosition());
+                const glm::vec3 velocity1 = body1->getVelocity() + glm::cross(body1->getAngularVelocity(), collisionPoint - body1->getPosition());
+                const glm::vec3 velocity2 = body2->getVelocity() + glm::cross(body2->getAngularVelocity(), collisionPoint - body2->getPosition());
 
                 const glm::vec3 relativeVelocity = velocity2 - velocity1;
 
-                const float normalVelocity = glm::dot(relativeVelocity, intersectionInfo.normal);
+                const float normalVelocity = glm::dot(relativeVelocity, intersectionInfo.getNormal());
 
                 const float restitution = body1->getPhysicsMaterial().restitution + pair.second->getPhysicsMaterial().restitution;
-
-                /*SphereHelperRef sphere(new SphereHelper({1, 1, 0}, 0.2f));
-                sphere->state.setPosition(collisionPoint);
-                globals.getScene()->add(sphere);*/
-
-                //const glm::vec3 relativeCollisionPoint1 = collisionPoint - body1->getPosition();
-                //const glm::vec3 relativeCollisionPoint2 = collisionPoint - body2->getPosition();
+                
+                const glm::vec3 relativeCollisionPoint1 = collisionPoint - body1->getPosition();
+                const glm::vec3 relativeCollisionPoint2 = collisionPoint - body2->getPosition();
 
                 const float invMasses = 1.0f / body1->getMass() + 1.0f / body2->getMass();
-                //const glm::mat3 bodyRotation1 = glm::mat3_cast(body1->getRotation());
-                //const glm::mat3 bodyRotation2 = glm::mat3_cast(body2->getRotation());
+                const glm::mat3 bodyRotation1 = glm::mat3_cast(body1->getRotation());
+                const glm::mat3 bodyRotation2 = glm::mat3_cast(body2->getRotation());
 
-                //const glm::mat3 invI1 = body1->isStatic() ? glm::mat3(0.0f) : glm::inverse(glm::transpose(bodyRotation1) * body1->getCollider()->getInertiaTensor(body1->getMass()) * bodyRotation1);
-                //const glm::mat3 invI2 = body2->isStatic() ? glm::mat3(0.0f) : glm::inverse(glm::transpose(bodyRotation2) * body2->getCollider()->getInertiaTensor(body2->getMass()) * bodyRotation2);
+                const glm::mat3 invI1 = body1->isStatic() ? glm::mat3(0.0f) : glm::inverse(glm::transpose(bodyRotation1) * body1->getCollider()->getInertiaTensor(body1->getMass()) * bodyRotation1);
+                const glm::mat3 invI2 = body2->isStatic() ? glm::mat3(0.0f) : glm::inverse(glm::transpose(bodyRotation2) * body2->getCollider()->getInertiaTensor(body2->getMass()) * bodyRotation2);
                 
-                //const glm::vec3 theta1 = body1->canRotate() ? glm::cross(invI1 * glm::cross(relativeCollisionPoint1, intersectionInfo.normal), relativeCollisionPoint1) : glm::vec3(0.0f, 0.0f, 0.0f);
-                //const glm::vec3 theta2 = body2->canRotate() ? glm::cross(invI2 * glm::cross(relativeCollisionPoint2, intersectionInfo.normal), relativeCollisionPoint2) : glm::vec3(0.0f, 0.0f, 0.0f);
+                const glm::vec3 theta1 = body1->canRotate() ? glm::cross(invI1 * glm::cross(relativeCollisionPoint1, intersectionInfo.getNormal()), relativeCollisionPoint1) : glm::vec3(0.0f, 0.0f, 0.0f);
+                const glm::vec3 theta2 = body2->canRotate() ? glm::cross(invI2 * glm::cross(relativeCollisionPoint2, intersectionInfo.getNormal()), relativeCollisionPoint2) : glm::vec3(0.0f, 0.0f, 0.0f);
 
-                //const float j = -(1.0f + restitution) * normalVelocity / (invMasses + glm::dot(theta1 + theta2, intersectionInfo.normal));
-                const float j = -(1.0f + restitution) * normalVelocity / invMasses;
+                const float j = -(1.0f + restitution) * normalVelocity / (invMasses + glm::dot(theta1 + theta2, intersectionInfo.getNormal()));
+                //const float j = -(1.0f + restitution) * normalVelocity / invMasses;
 
-                const glm::vec3 impulse = j * intersectionInfo.normal;
+                const glm::vec3 impulse = j * intersectionInfo.getNormal();
 
-                body1->setVelocity(body1->getVelocity() - impulse / body1->getMass());
+                body1->applyImpulse(relativeCollisionPoint1, invI1, impulse);
+                body2->applyImpulse(relativeCollisionPoint2, invI2, -impulse);
+                /*body1->setVelocity(body1->getVelocity() - impulse / body1->getMass());
                 body2->setVelocity(body2->getVelocity() + impulse / body2->getMass());
 
-                /*if (body1->canRotate()) {
+                if (body1->canRotate()) {
                     body1->setAngularVelocity(body1->getAngularVelocity() - invI1 * glm::cross(relativeCollisionPoint1, impulse));
                 }
                 if (body2->canRotate()) {
@@ -204,7 +208,7 @@ std::vector<PhysicsEngine::CollidingPair> PhysicsEngine::getPairs(bool continuou
 std::vector<ForceField::Ref> PhysicsEngine::getEffectiveForceFields(const RigidBody::Ref& rigidBody) const {
     std::vector<ForceField::Ref> effectiveForceFields;
     for (const ForceField::Ref& forceField : forceFields) {
-        if (forceField->isGlobal() || rigidBody->getCollider()->getCollisionInfo(rigidBody->getPosition(), forceField->getPosition(), rigidBody->getRotation(), forceField->getRotation(), forceField->getCollider(), false).has_value()) {
+        if (forceField->isGlobal() || rigidBody->getCollider()->getCollisionInfo(rigidBody->getPosition(), forceField->getPosition(), rigidBody->getRotation(), forceField->getRotation(), forceField->getCollider(), false).intersects()) {
             effectiveForceFields.push_back(forceField);
         }
     }
@@ -216,7 +220,7 @@ void PhysicsEngine::triggerEvents(float delta) {
         for (std::size_t j = 0; j < triggers.size(); ++j) {
             RigidBody::Ref rigidBody = rigidBodies[i];
             Trigger::Ref trigger = triggers[j];
-            if (trigger->getCollider()->getCollisionInfo(trigger->getPosition(), rigidBody->getPosition(), trigger->getRotation(), rigidBody->getRotation(), rigidBody->getCollider(), false).has_value()) {
+            if (trigger->getCollider()->getCollisionInfo(trigger->getPosition(), rigidBody->getPosition(), trigger->getRotation(), rigidBody->getRotation(), rigidBody->getCollider(), false).intersects()) {
                 if (functionalTriggers[j].contains(i)) {
                     trigger->triggerOnTickEvent(rigidBody, delta);
                 }
@@ -259,18 +263,23 @@ RigidBody::RigidBody(
     float mass,
     PhysicsMaterial material,
     int layer,
+    bool staticBody,
     const glm::vec3& position,
     const glm::vec3& velocity,
+    bool fixedRotation,
     const glm::quat& rotation,
     const glm::vec3& angularVelocity
+    
 ) :
     transformTree(transformTree),
     collider(collider),
     mass(mass),
     material(material),
     layer(layer),
+    staticBody(staticBody),
     position(position),
     velocity(velocity),
+    fixedRotation(fixedRotation),
     rotation(rotation),
     angularVelocity(angularVelocity)
 {
@@ -289,13 +298,25 @@ void RigidBody::tick(const std::vector<ForceField::Ref>& forceFields, float delt
         //position += delta * velocity;
         integrateMotion(forceFields, delta);
 
-        rotation = glm::quat{delta * angularVelocity} * rotation;
+        if (canRotate()) {
+            rotation = glm::quat{delta * angularVelocity} * rotation;
+        }
     }    
 
     if (transformTree != nullptr) {
         transformTree->transform.setTranslation(position);
         transformTree->transform.setRotation(rotation);
     }
+}
+
+RigidBody& RigidBody::applyImpulse(const glm::vec3& impulsePosition, const glm::mat3& inverseInertia, const glm::vec3& impulse) {
+    if (!isStatic()) {
+        velocity -= impulse / mass;
+        if (canRotate()) {
+            angularVelocity -= inverseInertia * glm::cross(impulsePosition, impulse);
+        }
+    }
+    return *this;
 }
 
 glm::vec3 RigidBody::getAccelerationAtPosition(const std::vector<ForceField::Ref>& forceFields) const {
@@ -316,10 +337,8 @@ void RigidBody::integrateMotion(const std::vector<ForceField::Ref>& forceFields,
     velocity += 0.5f * (acceleration + newAcceleration) * delta;
 }
 
-std::optional<IntersectionInfo> Collider::getCollisionInfo(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const Collider* collider, bool continuous) {
+geometry::DiscreteIntersectionInfo Collider::getCollisionInfo(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const Collider* collider, bool continuous) {
     switch (collider->getColliderType()) {
-        case ColliderType::AABB :
-            return getCollisionInfoAABB(position, positionOther, rotation, rotationOther, static_cast<const AABBCollider*>(collider), continuous);
         case ColliderType::OBB :
             return getCollisionInfoOBB(position, positionOther, rotation, rotationOther, static_cast<const OBBCollider*>(collider), continuous);
         case ColliderType::SPHERE :
@@ -329,7 +348,7 @@ std::optional<IntersectionInfo> Collider::getCollisionInfo(const glm::vec3& posi
         case ColliderType::CONVEX :
             return getCollisionInfoConvex(position, positionOther, rotation, rotationOther, static_cast<const ConvexCollider*>(collider), continuous);
         default:
-            return std::nullopt;
+            return geometry::DiscreteIntersectionInfo::none();
     }
 }
 
@@ -379,125 +398,7 @@ Trigger::~Trigger() {
 /* Helper functions */
 /********************/
 
-static std::optional<IntersectionInfo> collisionInfoOBBOBB(const glm::vec3& position1, const glm::vec3& position2, const glm::quat& rotation1, const glm::quat& rotation2, const glm::vec3& size1, const glm::vec3& size2) {
-    std::vector<glm::vec3> axes(6);
-    glm::vec3 eulerRotation1 = glm::eulerAngles(rotation1);
-    glm::mat4 rotationMatrix1 = glm::eulerAngleXYZ(eulerRotation1.x, eulerRotation1.y, eulerRotation1.z);
-    axes[0] = glm::vec3(rotationMatrix1 * glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
-    axes[1] = glm::vec3(rotationMatrix1 * glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
-    axes[2] = glm::vec3(rotationMatrix1 * glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
-
-    glm::vec3 eulerRotation2 = glm::eulerAngles(rotation2);
-    glm::mat4 rotationMatrix2 = glm::eulerAngleXYZ(eulerRotation2.x, eulerRotation2.y, eulerRotation2.z);
-    axes[3] = glm::vec3(rotationMatrix2 * glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
-    axes[4] = glm::vec3(rotationMatrix2 * glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
-    axes[5] = glm::vec3(rotationMatrix2 * glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
-
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 3; j < 6; ++j) {
-            const glm::vec3 crossAxes = glm::cross(axes[i], axes[j]);
-            if (crossAxes != glm::vec3(0.0f, 0.0f, 0.0f)) {
-                axes.push_back(crossAxes);
-            }
-        }
-    }
-    std::vector<glm::vec3> points1(8);
-    points1[0] = position1 - axes[0] * size1.x - axes[1] * size1.y - axes[2] * size1.z;
-    points1[1] = position1 - axes[0] * size1.x - axes[1] * size1.y + axes[2] * size1.z;
-    points1[2] = position1 - axes[0] * size1.x + axes[1] * size1.y - axes[2] * size1.z;
-    points1[3] = position1 - axes[0] * size1.x + axes[1] * size1.y + axes[2] * size1.z;
-    points1[4] = position1 + axes[0] * size1.x - axes[1] * size1.y - axes[2] * size1.z;
-    points1[5] = position1 + axes[0] * size1.x - axes[1] * size1.y + axes[2] * size1.z;
-    points1[6] = position1 + axes[0] * size1.x + axes[1] * size1.y - axes[2] * size1.z;
-    points1[7] = position1 + axes[0] * size1.x + axes[1] * size1.y + axes[2] * size1.z;
-
-    std::vector<glm::vec3> points2(8);
-    points2[0] = position2 - axes[3] * size2.x - axes[4] * size2.y - axes[5] * size2.z;
-    points2[1] = position2 - axes[3] * size2.x - axes[4] * size2.y + axes[5] * size2.z;
-    points2[2] = position2 - axes[3] * size2.x + axes[4] * size2.y - axes[5] * size2.z;
-    points2[3] = position2 - axes[3] * size2.x + axes[4] * size2.y + axes[5] * size2.z;
-    points2[4] = position2 + axes[3] * size2.x - axes[4] * size2.y - axes[5] * size2.z;
-    points2[5] = position2 + axes[3] * size2.x - axes[4] * size2.y + axes[5] * size2.z;
-    points2[6] = position2 + axes[3] * size2.x + axes[4] * size2.y - axes[5] * size2.z;
-    points2[7] = position2 + axes[3] * size2.x + axes[4] * size2.y + axes[5] * size2.z;
-    return sat(points1, points2, axes);
-}
-
-static std::optional<IntersectionInfo> collisionInfoOBBSphere(const glm::vec3& position1, const glm::vec3& position2, const glm::quat& rotation, const glm::vec3& size, float radius) {
-    std::vector<glm::vec3> axes(3);
-    glm::vec3 eulerRotation = glm::eulerAngles(rotation);
-    glm::mat4 rotationMatrix = glm::eulerAngleXYZ(eulerRotation.x, eulerRotation.y, eulerRotation.z);
-    axes[0] = glm::vec3(rotationMatrix * glm::vec4(size.x, 0.0f, 0.0f, 1.0f));
-    axes[1] = glm::vec3(rotationMatrix * glm::vec4(0.0f, size.y, 0.0f, 1.0f));
-    axes[2] = glm::vec3(rotationMatrix * glm::vec4(0.0f, 0.0f, size.z, 1.0f));
-
-    const glm::vec3 relativePosition = position2 - position1;
-    glm::vec3 normalizedPosition;
-    for (int i = 0; i < 3; ++i) {
-        normalizedPosition[i] = std::clamp(glm::dot(relativePosition, axes[i]) / glm::length2(axes[i]), -1.0f, 1.0f);
-    }
-    const glm::vec3 normalizedDifference = glm::abs(normalizedPosition);
-    if (glm::all(glm::lessThan(normalizedDifference, glm::vec3(1.0f)))) {
-        // Sphere inside
-        IntersectionInfo intersectionInfo;
-        if (normalizedDifference[0] > normalizedDifference[1] && normalizedDifference[0] > normalizedDifference[2]) {
-            intersectionInfo.penetration = (1.0f - normalizedDifference[0]) * size.x;
-            intersectionInfo.normal = axes[0] / size.x;
-        }
-        else if (normalizedDifference[1] > normalizedDifference[0] && normalizedDifference[1] > normalizedDifference[2]) {
-            intersectionInfo.penetration = (1.0f - normalizedDifference[1]) * size.y;
-            intersectionInfo.normal = axes[1] / size.y;
-        }
-        else {
-            intersectionInfo.penetration = (1.0f - normalizedDifference[2]) * size.z;
-            intersectionInfo.normal = axes[2] / size.z;
-        }
-        intersectionInfo.collisionPoint = position2 + 0.5f * intersectionInfo.penetration * intersectionInfo.normal;
-        return std::make_optional(intersectionInfo);
-    }
-    else {
-        // Sphere outside
-        glm::vec3 closestPointPosition(0.0f);
-        for (int i = 0; i < 3; ++i) {
-            closestPointPosition += axes[i] * normalizedPosition[i];
-        }
-        return getSpheresIntersection(closestPointPosition + position1, 0.0f, position2, radius);
-    }
-}
-
-static std::optional<IntersectionInfo> collisionInfoConvexConvex(const glm::vec3& position1, const glm::vec3& position2, const glm::quat& rotation1, const glm::quat& rotation2, const std::vector<glm::vec3>& vertices1, const std::vector<glm::vec3>& vertices2) {
-    glm::vec3 eulerRotation1 = glm::eulerAngles(rotation1);
-    glm::mat4 rotationMatrix1 = glm::eulerAngleXYZ(eulerRotation1.x, eulerRotation1.y, eulerRotation1.z);
-    std::vector<glm::vec3> verticesPositions1(vertices1.size());
-    for (std::size_t i = 0; i < vertices1.size(); ++i) {
-        verticesPositions1[i] = position1 + glm::vec3(rotationMatrix1 * glm::vec4(vertices1[i], 1.0f));
-    }
-
-    glm::vec3 eulerRotation2 = glm::eulerAngles(rotation2);
-    glm::mat4 rotationMatrix2 = glm::eulerAngleXYZ(eulerRotation2.x, eulerRotation2.y, eulerRotation2.z);
-    std::vector<glm::vec3> verticesPositions2(vertices2.size());
-    for (std::size_t i = 0; i < vertices2.size(); ++i) {
-        verticesPositions2[i] = position2 + glm::vec3(rotationMatrix2 * glm::vec4(vertices2[i], 1.0f));
-    }
-
-    return gjk(verticesPositions1, verticesPositions2);
-}
-
-static std::optional<IntersectionInfo> collisionInfoOBBConvex(const glm::vec3& position1, const glm::vec3& position2, const glm::quat& rotation1, const glm::quat& rotation2, const glm::vec3& size, const std::vector<glm::vec3>& vertices) {
-    std::vector<glm::vec3> obbVertices(8);
-    obbVertices[0] = glm::vec3(-size.x, -size.y, -size.z);
-    obbVertices[1] = glm::vec3(-size.x, -size.y, size.z);
-    obbVertices[2] = glm::vec3(-size.x, size.y, -size.z);
-    obbVertices[3] = glm::vec3(-size.x, size.y, size.z);
-    obbVertices[4] = glm::vec3(size.x, -size.y, -size.z);
-    obbVertices[5] = glm::vec3(size.x, -size.y, size.z);
-    obbVertices[6] = glm::vec3(size.x, size.y, -size.z);
-    obbVertices[7] = glm::vec3(size.x, size.y, size.z);
-    
-    return collisionInfoConvexConvex(position1, position2, rotation1, rotation2, obbVertices, vertices);
-}
-
-static std::optional<IntersectionInfo> collisionInfoSphereConvex(const glm::vec3& position1, const glm::vec3& position2, const glm::quat rotation, const float radius, const std::vector<glm::vec3>& vertices) {
+static geometry::DiscreteIntersectionInfo collisionInfoSphereConvex(const glm::vec3& position1, const glm::vec3& position2, const glm::quat rotation, const float radius, const std::vector<glm::vec3>& vertices) {
     glm::vec3 eulerRotation = glm::eulerAngles(rotation);
     glm::mat4 rotationMatrix = glm::eulerAngleXYZ(eulerRotation.x, eulerRotation.y, eulerRotation.z);
     std::vector<glm::vec3> verticesPositions(vertices.size());
@@ -529,91 +430,7 @@ static std::optional<IntersectionInfo> collisionInfoSphereConvex(const glm::vec3
             closestPoint = point;
         }
     }
-    return getSpheresIntersection(position1, radius, closestPoint, 0.0f);
-    //return std::nullopt;
-}
-
-/********/
-/* AABB */
-/********/
-
-AABBCollider::AABBCollider(const glm::vec3& halfDimensions) :
-    size(halfDimensions)
-{}
-
-glm::mat3 AABBCollider::getInertiaTensor(float mass) const {
-    const float x2{4.0f * size.x * size.x};
-    const float y2{4.0f * size.y * size.y};
-    const float z2{4.0f * size.z * size.z};
-    return glm::diagonal3x3(mass / 12.0f * glm::vec3(y2 + z2, x2 + z2, x2 + y2));
-}
-
-std::optional<IntersectionInfo> AABBCollider::getCollisionInfoAABB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const AABBCollider* collider, bool continuous) const {
-    if (!continuous) {
-        const glm::vec3 sumSize = size + collider->size;
-        const glm::vec3 difference = glm::abs(position - positionOther);
-        if (glm::all(glm::lessThanEqual(difference, sumSize))) {
-            IntersectionInfo intersectionInfo;
-            const glm::vec3 penetration{sumSize - difference};
-            if (penetration.x < penetration.y && penetration.x < penetration.z) {
-                intersectionInfo.normal = glm::vec3(position.x >= positionOther.x ? 1.0f : -1.0f, 0.0f, 0.0f);
-                intersectionInfo.collisionPoint = ((size.x - 0.5f * penetration) / sumSize.x) * (positionOther - position);
-                intersectionInfo.penetration = penetration.x;
-            }
-            else if (penetration.y < penetration.x && penetration.y < penetration.z) {
-                intersectionInfo.normal = glm::vec3(0.0f, position.y >= positionOther.y ? 1.0f : -1.0f, 0.0f);
-                intersectionInfo.collisionPoint = ((size.y - 0.5f * penetration) / sumSize.y) * (positionOther - position);
-                intersectionInfo.penetration = penetration.y;
-            }
-            else {
-                intersectionInfo.normal = glm::vec3(0.0f, 0.0f, position.z >= positionOther.z ? 1.0f : -1.0f);
-                intersectionInfo.collisionPoint = ((size.z - 0.5f * penetration) / sumSize.z) * (positionOther - position);
-                intersectionInfo.penetration = penetration.z;
-            }
-            return std::make_optional(intersectionInfo);
-        }
-        else {
-            return std::nullopt;
-        }
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
-}
-
-std::optional<IntersectionInfo> AABBCollider::getCollisionInfoOBB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const OBBCollider* collider, bool continuous) const {
-    if (!continuous) {
-        return collisionInfoOBBOBB(position, positionOther, rotation, rotationOther, size, collider->size);
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
-}
-
-std::optional<IntersectionInfo> AABBCollider::getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const {
-    if (!continuous) {
-        return collisionInfoOBBSphere(position, positionOther, rotation, size, collider->radius);
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
-}
-
-std::optional<IntersectionInfo> AABBCollider::getCollisionInfoConvex(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const ConvexCollider* collider, bool continuous) const {
-    if (!continuous) {
-        return collisionInfoOBBConvex(position, positionOther, rotation, rotationOther, size, collider->vertices);
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
-}
-
-std::pair<glm::vec3, glm::vec3> AABBCollider::getBoundingBox(const glm::vec3& position, const glm::quat& rotation) const {
-    return std::make_pair(position - size, position + size);
+    return geometry::pointSphereIntersection(position1, closestPoint, radius);
 }
 
 /*******/
@@ -625,52 +442,29 @@ OBBCollider::OBBCollider(const glm::vec3& halfDimensions) :
 {}
 
 glm::mat3 OBBCollider::getInertiaTensor(float mass) const {
-    const float x2{4.0f * size.x * size.x};
-    const float y2{4.0f * size.y * size.y};
-    const float z2{4.0f * size.z * size.z};
-    return glm::diagonal3x3(mass / 12.0f * glm::vec3(y2 + z2, x2 + z2, x2 + y2));
+    const float x2{size.x * size.x};
+    const float y2{size.y * size.y};
+    const float z2{size.z * size.z};
+    return glm::diagonal3x3(mass / 3.0f * glm::vec3(y2 + z2, x2 + z2, x2 + y2));
 }
 
-std::optional<IntersectionInfo> OBBCollider::getCollisionInfoAABB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const AABBCollider* collider, bool continuous) const {
-    std::optional<IntersectionInfo> collisionInfo = collider->getCollisionInfoOBB(positionOther, position, rotationOther, rotation, this, continuous);
-    if (collisionInfo.has_value()) {
-        return std::make_optional(collisionInfo.value().invert());
-    }
-    return std::nullopt;
+geometry::DiscreteIntersectionInfo OBBCollider::getCollisionInfoOBB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const OBBCollider* collider, bool continuous) const {
+    return geometry::boxBoxIntersection(position, rotation, size, positionOther, rotationOther, collider->size);
 }
 
-std::optional<IntersectionInfo> OBBCollider::getCollisionInfoOBB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const OBBCollider* collider, bool continuous) const {
-    if (!continuous) {
-        return collisionInfoOBBOBB(position, positionOther, rotation, rotationOther, size, collider->size);
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
+geometry::DiscreteIntersectionInfo OBBCollider::getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const {
+    return geometry::boxSphereIntersection(position, rotation, size, positionOther, collider->radius);
 }
 
-std::optional<IntersectionInfo> OBBCollider::getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const {
-    if (!continuous) {
-        return collisionInfoOBBSphere(position, positionOther, rotation, size, collider->radius);
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
+geometry::DiscreteIntersectionInfo OBBCollider::getCollisionInfoConvex(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const ConvexCollider* collider, bool continuous) const {
+    return geometry::convexConvexIntersection(
+        position, rotation, geometry::getBoxVertices(size),
+        positionOther, rotationOther, collider->vertices
+    );
 }
 
-std::optional<IntersectionInfo> OBBCollider::getCollisionInfoConvex(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const ConvexCollider* collider, bool continuous) const {
-    if (!continuous) {
-        return collisionInfoOBBConvex(position, positionOther, rotation, rotationOther, size, collider->vertices);
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
-}
-
-std::pair<glm::vec3, glm::vec3> OBBCollider::getBoundingBox(const glm::vec3& position, const glm::quat& rotation) const {
-    return geometry::convexSetBoundingBox(geometry::translatePoints(geometry::getBoxVertices(size, rotation), position));
+geometry::BoundingBox OBBCollider::getBoundingBox(const glm::vec3& position, const glm::quat& rotation) const {
+    return geometry::convexSetBoundingBox(geometry::transformPoints(geometry::getBoxVertices(size), position, rotation));
 }
 
 /**********/
@@ -685,63 +479,23 @@ glm::mat3 SphereCollider::getInertiaTensor(float mass) const {
     return glm::mat3(2.0f / 5.0f * mass * radius * radius);
 }
 
-std::optional<IntersectionInfo> SphereCollider::getCollisionInfoAABB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const AABBCollider* collider, bool continuous) const {
-    if (!continuous) {
-        std::optional<IntersectionInfo> collisionInfo = collisionInfoOBBSphere(positionOther, position, rotationOther, collider->size, radius);
-        if (collisionInfo.has_value()) {
-            return std::make_optional(collisionInfo.value().invert());
-        }
-        return std::nullopt;
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
+geometry::DiscreteIntersectionInfo SphereCollider::getCollisionInfoOBB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const OBBCollider* collider, bool continuous) const {
+    return geometry::boxSphereIntersection(positionOther, rotationOther, collider->size, position, radius).getInverse();
 }
 
-std::optional<IntersectionInfo> SphereCollider::getCollisionInfoOBB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const OBBCollider* collider, bool continuous) const {
-    if (!continuous) {
-        std::optional<IntersectionInfo> collisionInfo = collisionInfoOBBSphere(positionOther, position, rotationOther, collider->size, radius);
-        if (collisionInfo.has_value()) {
-            return std::make_optional(collisionInfo.value().invert());
-        }
-        return std::nullopt;
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
+geometry::DiscreteIntersectionInfo SphereCollider::getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const {
+    return geometry::sphereSphereIntersection(position, radius, positionOther, collider->radius);
 }
 
-std::optional<IntersectionInfo> SphereCollider::getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const {
-    if (!continuous) {
-        return getSpheresIntersection(position, radius, positionOther, collider->radius);
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
+geometry::DiscreteIntersectionInfo SphereCollider::getCollisionInfoCapsule(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const CapsuleCollider* collider, bool continuous) const {
+    return geometry::sphereCapsuleIntersection(position, radius, positionOther, rotationOther, collider->halfLength, collider->radius);
 }
 
-std::optional<IntersectionInfo> SphereCollider::getCollisionInfoCapsule(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const CapsuleCollider* collider, bool continuous) const {
-    std::optional<IntersectionInfo> collisionInfo = collider->getCollisionInfoSphere(positionOther, position, rotationOther, rotation, this, continuous);
-    if (collisionInfo.has_value()) {
-        return std::make_optional(collisionInfo.value().invert());
-    }
-    return std::nullopt;
+geometry::DiscreteIntersectionInfo SphereCollider::getCollisionInfoConvex(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const ConvexCollider* collider, bool continuous) const {
+    return collisionInfoSphereConvex(position, positionOther, rotationOther, radius, collider->vertices);
 }
 
-std::optional<IntersectionInfo> SphereCollider::getCollisionInfoConvex(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const ConvexCollider* collider, bool continuous) const {
-    if (!continuous) {
-        return collisionInfoSphereConvex(position, positionOther, rotationOther, radius, collider->vertices);
-    }
-    else {
-        // swept
-        return std::nullopt;
-    } 
-}
-
-std::pair<glm::vec3, glm::vec3> SphereCollider::getBoundingBox(const glm::vec3& position, const glm::quat& rotation) const {
+geometry::BoundingBox SphereCollider::getBoundingBox(const glm::vec3& position, const glm::quat& rotation) const {
     const glm::vec3 radiusVector = glm::vec3(radius);
     return std::make_pair(
         position - radiusVector,
@@ -753,34 +507,56 @@ std::pair<glm::vec3, glm::vec3> SphereCollider::getBoundingBox(const glm::vec3& 
 /* Capsule */
 /***********/
 
-CapsuleCollider::CapsuleCollider(const glm::vec3& center1, const glm::vec3& center2, float radius) :
-    center1(center1),
-    center2(center2),
+CapsuleCollider::CapsuleCollider(float halfLength, float radius) :
+    halfLength(halfLength),
     radius(radius)
 {}
 
+/*
+const float oneDiv3 = (float)(1.0 / 3.0);
+const float oneDiv8 = (float)(1.0 / 8.0);
+const float oneDiv12 = (float)(1.0 / 12.0);
+void ComputeRigidBodyProperties_Capsule(float capsuleHeight, float capsuleRadius, float density, float & mass, float3 & centerOfMass, float3x3 & inertia) {
+  float cM; // cylinder mass
+  float hsM; // mass of hemispheres
+  float rSq = capsuleRadius * capsuleRadius;
+  cM = PI * capsuleHeight * rSq * density;
+  hsM = PI_TIMES2 * oneDiv3 * rSq * capsuleRadius * density; // from cylinder
+  inertia._22 = rSq * cM * 0.5 f;
+  inertia._11 = inertia._33 = inertia._22 * 0.5 f + cM * capsuleHeight * capsuleHeight * oneDiv12; // from hemispheres
+  float temp0 = hsM * 2.0 f * rSq / 5.0 f;
+  inertia._22 += temp0 * 2.0 f;
+  float temp1 = capsuleHeight * 0.5 f;
+  float temp2 = temp0 + hsM * (temp1 * temp1 + 3.0 f * oneDiv8 * capsuleHeight * capsuleRadius);
+  inertia._11 += temp2 * 2.0 f;
+  inertia._33 += temp2 * 2.0 f;
+  inertia._12 = inertia._13 = inertia._21 = inertia._23 = inertia._31 = inertia._32 = 0.0 f;
+  mass = cM + hsM * 2.0 f;
+}*/
+
 glm::mat3 CapsuleCollider::getInertiaTensor(float mass) const {
-    return glm::mat3(1.0f);
-    //return glm::mat3(2.0f / 5.0f * mass * radius * radius);
+    const float length = 2.0f * halfLength;
+    const float radius2 = radius * radius;
+
+    const float cylinderVolume = glm::pi<float>() * length * radius2;
+    const float hemispheresVolume = 2.0f * glm::pi<float>() * radius * radius2 / 3.0f;
+    const float cylinderMass = mass * cylinderVolume / (cylinderVolume + 2.0f * hemispheresVolume);
+    const float hemispheresMass = mass - cylinderMass;
+
+    const float a = 0.5f * radius2 * cylinderMass;
+    const float b = 0.5f * a + cylinderMass * length * length / 12.0f;
+    const float c = 2.0f * hemispheresMass * radius2 / 5.0f;
+    const float d = c + hemispheresMass * (halfLength * halfLength + 3.0f / 8.0f * length * radius);
+    return glm::diagonal3x3(glm::vec3(b + 2.0f * d, a + 2.0f * c, b + 2.0f * d));
 }
 
-std::optional<IntersectionInfo> CapsuleCollider::getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const {
-    if (!continuous) {
-        const glm::vec3 lineDifference = center2 - center1;
-        const glm::vec3 pointDifference = positionOther - center1;
-        const float linePosition = std::clamp(glm::dot(lineDifference, pointDifference) / glm::length2(lineDifference), 0.0f, 1.0f);
-        const glm::vec3 pointPosition = linePosition * lineDifference + center1;
-        return getSpheresIntersection(pointPosition, radius, position, collider->radius); 
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
+geometry::DiscreteIntersectionInfo CapsuleCollider::getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const {
+    return geometry::sphereCapsuleIntersection(positionOther, collider->radius, position, rotation, halfLength, radius).getInverse();
 }
 
-// todo implement
-std::pair<glm::vec3, glm::vec3> CapsuleCollider::getBoundingBox(const glm::vec3& position, const glm::quat& rotation) const {
-    return std::make_pair(center1, center2);
+geometry::BoundingBox CapsuleCollider::getBoundingBox(const glm::vec3& position, const glm::quat& rotation) const {
+    auto [capsuleCenter1, capsuleCenter2] = geometry::capsuleCenters(position, rotation, halfLength);
+    return geometry::capsuleBoundingBox(capsuleCenter1, capsuleCenter2, radius);
 }
 
 /**********/
@@ -797,59 +573,24 @@ glm::mat3 ConvexCollider::getInertiaTensor(float mass) const {
     return glm::mat3(1.0f);
 }
 
-std::optional<IntersectionInfo> ConvexCollider::getCollisionInfoAABB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const AABBCollider* collider, bool continuous) const {
-    if (!continuous) {
-        std::optional<IntersectionInfo> collisionInfo = collisionInfoOBBConvex(positionOther, position, rotationOther, rotation, collider->size, vertices);
-        if (collisionInfo.has_value()) {
-            return std::make_optional(collisionInfo.value().invert());
-        }
-        return std::nullopt;
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
+geometry::DiscreteIntersectionInfo ConvexCollider::getCollisionInfoOBB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const OBBCollider* collider, bool continuous) const {
+    return geometry::convexConvexIntersection(
+        position, rotation, vertices,
+        positionOther, rotationOther, geometry::getBoxVertices(collider->size)
+    );
 }
 
-std::optional<IntersectionInfo> ConvexCollider::getCollisionInfoOBB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const OBBCollider* collider, bool continuous) const {
-    if (!continuous) {
-        std::optional<IntersectionInfo> collisionInfo = collisionInfoOBBConvex(positionOther, position, rotationOther, rotation, collider->size, vertices);
-        if (collisionInfo.has_value()) {
-            return std::make_optional(collisionInfo.value().invert());
-        }
-        return std::nullopt;
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
+geometry::DiscreteIntersectionInfo ConvexCollider::getCollisionInfoConvex(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const ConvexCollider* collider, bool continuous) const {
+    return geometry::convexConvexIntersection(
+        position, rotation, vertices,
+        positionOther, rotationOther, collider->vertices
+    );
 }
 
-std::optional<IntersectionInfo> ConvexCollider::getCollisionInfoConvex(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const ConvexCollider* collider, bool continuous) const {
-    if (!continuous) {
-        return collisionInfoConvexConvex(position, positionOther, rotation, rotationOther, vertices, collider->vertices);
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
+geometry::DiscreteIntersectionInfo ConvexCollider::getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const {
+    return collisionInfoSphereConvex(positionOther, position, rotation, collider->radius, vertices).getInverse();
 }
 
-std::optional<IntersectionInfo> ConvexCollider::getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const {
-    if (!continuous) {
-        std::optional<IntersectionInfo> collisionInfo = collisionInfoSphereConvex(positionOther, position, rotation, collider->radius, vertices);
-        if (collisionInfo.has_value()) {
-            return std::make_optional(collisionInfo.value().invert());
-        }
-        return std::nullopt;
-    }
-    else {
-        // swept
-        return std::nullopt;
-    }
-}
-
-// todo rotate
-std::pair<glm::vec3, glm::vec3> ConvexCollider::getBoundingBox(const glm::vec3& position, const glm::quat& rotation) const {
-    return geometry::convexSetBoundingBox(geometry::translatePoints(vertices, position));
+geometry::BoundingBox ConvexCollider::getBoundingBox(const glm::vec3& position, const glm::quat& rotation) const {
+    return geometry::convexSetBoundingBox(geometry::transformPoints(vertices, position, rotation));
 }

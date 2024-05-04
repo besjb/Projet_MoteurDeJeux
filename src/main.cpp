@@ -39,6 +39,7 @@ Mesh* globalEarthMesh;
 Mesh* globalCarMesh;
 float deltaT{};
 bool impulseModel{false};
+Scene* scenePointer;
 
 bool captureMouse{false};
 PhysicsEngine* physicsEnginePointer;
@@ -135,7 +136,7 @@ int main(int argc, char** argv) {
         16.0f
     };
 
-    Mesh carMesh{Mesh::loadFromFile("./models/Octane.obj", &carMaterial)};
+    Mesh carMesh{Mesh::loadFromFile("./models/cube.obj", &carMaterial)};
     globalCarMesh = &carMesh;
 
     Scene scene{
@@ -153,10 +154,7 @@ int main(int argc, char** argv) {
         }
     };
 
-    /*scene.getRootTransformTree()
-        ->addChild({{}, {}, 1.0f})
-            ->addObject(&heightMap)
-            ->getParent();*/
+    scenePointer = &scene;
 
     glfwSetWindowUserPointer(window, &scene);
 
@@ -168,7 +166,7 @@ int main(int argc, char** argv) {
 
     physicsEngine.addForceField(gravity);
 
-    AABBCollider planeCollider{{16.0f, 1.0f, 16.0f}};
+    OBBCollider planeCollider{{16.0f, 1.0f, 16.0f}};
 
     TransformTree* arenaTree{scene.getRootTransformTree()};
     RigidBody::Ref plane{RigidBody::make(
@@ -176,18 +174,24 @@ int main(int argc, char** argv) {
         &planeCollider,
         -1.0f,
         PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
-        0
+        0,
+        true,
+        glm::vec3{2.0f, 0.0f, 0.0f},
+        glm::vec3{},
+        true
     )};
     physicsEngine.addRigidBody(plane);
 
-    RigidBody::Ref wall1{RigidBody::make(
+    /*RigidBody::Ref wall1{RigidBody::make(
         arenaTree->addChild({{}, glm::identity<glm::quat>(), {16.0f, 1.0f, 16.0f}})->addObject(&earthMesh),
         &planeCollider,
         -1.0f,
         PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
         0,
+        true,
         glm::vec3{16.0f, 0.0f, 0.0f},
         glm::vec3{0.0f, 0.0f, 0.0f},
+        true,
         glm::angleAxis(glm::radians(90.0f), glm::vec3{0.0f, 0.0f, 1.0f})
     )};
     physicsEngine.addRigidBody(wall1);
@@ -198,8 +202,10 @@ int main(int argc, char** argv) {
         -1.0f,
         PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
         0,
+        true,
         glm::vec3{-16.0f, 0.0f, 0.0f},
         glm::vec3{0.0f, 0.0f, 0.0f},
+        true,
         glm::angleAxis(glm::radians(90.0f), glm::vec3{0.0f, 0.0f, 1.0f})
     )};
     physicsEngine.addRigidBody(wall2);
@@ -210,8 +216,10 @@ int main(int argc, char** argv) {
         -1.0f,
         PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
         0,
+        true,
         glm::vec3{0.0f, 0.0f, 16.0f},
         glm::vec3{0.0f, 0.0f, 0.0f},
+        true,
         glm::angleAxis(glm::radians(90.0f), glm::vec3{1.0f, 0.0f, 0.0f})
     )};
     physicsEngine.addRigidBody(wall3);
@@ -222,11 +230,13 @@ int main(int argc, char** argv) {
         -1.0f,
         PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
         0,
+        true,
         glm::vec3{0.0f, 0.0f, -16.0f},
         glm::vec3{0.0f, 0.0f, 0.0f},
+        true,
         glm::angleAxis(glm::radians(90.0f), glm::vec3{1.0f, 0.0f, 0.0f})
     )};
-    physicsEngine.addRigidBody(wall4);
+    physicsEngine.addRigidBody(wall4);*/
 
     double lastTime{std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::system_clock::now().time_since_epoch()).count()};
     while (!glfwWindowShouldClose(window)) {
