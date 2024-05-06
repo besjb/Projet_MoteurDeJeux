@@ -10,7 +10,7 @@ ifeq ($(OS),Windows_NT)
 else
 	INCLUDE_DIR = -Iinclude -Icommon/include
 	LIB_DIR = -Lcommon/lib
-	LIBS = -lglfw3 -lGL -lGLEW -limgui
+	LIBS = -lglfw3 -lGL -lGLEW -limgui -ldl -lpthread
 endif
 
 OBJ_DIR = obj
