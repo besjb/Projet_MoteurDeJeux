@@ -65,13 +65,13 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                     tree,
                     &cubeCollider,
                     1.0f,
-                    PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
+                    PhysicsMaterial{0.0f, 0.5f, 0.0f, 0.0f},
                     0,
                     false,
                     scene->getCamera().getPosition(),
                     8.0f * forward,
-                    false,
-                    glm::conjugate(scene->getCamera().getRotation()) * glm::angleAxis(glm::radians(45.0f), glm::normalize(glm::vec3{0.5f, 0.0f, 1.0f}))
+                    false
+                    //glm::conjugate(scene->getCamera().getRotation()) * glm::angleAxis(glm::radians(45.0f), glm::normalize(glm::vec3{0.5f, 0.0f, 1.0f}))
                     //glm::vec3{2.0f, 2.0f, 0.0f}
                 )};
 

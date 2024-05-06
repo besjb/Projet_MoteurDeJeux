@@ -41,8 +41,10 @@ void PhysicsEngine::tick(float delta) {
                 }
                 body1->setPosition(body1->getPosition() + intersectionInfo.getPenetration() * intersectionInfo.getNormal() * massRatio);
                 body2->setPosition(body2->getPosition() - intersectionInfo.getPenetration() * intersectionInfo.getNormal() * (1.0f - massRatio));
+                
+                const glm::vec3 collisionPoint = intersectionInfo.getIntersectionPoint() + intersectionInfo.getNormal() * intersectionInfo.getPenetration() * (massRatio - 0.5f);
 
-                const glm::vec3 collisionPoint = intersectionInfo.getIntersectionPolygon()[0] + intersectionInfo.getNormal() * intersectionInfo.getPenetration() * (massRatio - 0.5f);
+                //std::cout << glm::to_string(collisionPoint) << '\n';
                 //scenePointer->getRootTransformTree()->addChild({collisionPoint, glm::identity<glm::quat>(), glm::vec3(0.04f)})->addObject(globalEarthMesh);
 
                 const glm::vec3 velocity1 = body1->getVelocity() + glm::cross(body1->getAngularVelocity(), collisionPoint - body1->getPosition());
@@ -58,11 +60,9 @@ void PhysicsEngine::tick(float delta) {
                 const glm::vec3 relativeCollisionPoint2 = collisionPoint - body2->getPosition();
 
                 const float invMasses = 1.0f / body1->getMass() + 1.0f / body2->getMass();
-                const glm::mat3 bodyRotation1 = glm::mat3_cast(body1->getRotation());
-                const glm::mat3 bodyRotation2 = glm::mat3_cast(body2->getRotation());
 
-                const glm::mat3 invI1 = body1->isStatic() ? glm::mat3(0.0f) : glm::inverse(glm::transpose(bodyRotation1) * body1->getCollider()->getInertiaTensor(body1->getMass()) * bodyRotation1);
-                const glm::mat3 invI2 = body2->isStatic() ? glm::mat3(0.0f) : glm::inverse(glm::transpose(bodyRotation2) * body2->getCollider()->getInertiaTensor(body2->getMass()) * bodyRotation2);
+                const glm::mat3 invI1 = body1->isStatic() ? glm::mat3(0.0f) : glm::inverse(geometry::rotateInertiaTensor(body1->getCollider()->getInertiaTensor(body1->getMass()), body1->getRotation()));
+                const glm::mat3 invI2 = body2->isStatic() ? glm::mat3(0.0f) : glm::inverse(geometry::rotateInertiaTensor(body2->getCollider()->getInertiaTensor(body2->getMass()), body2->getRotation()));
                 
                 const glm::vec3 theta1 = body1->canRotate() ? glm::cross(invI1 * glm::cross(relativeCollisionPoint1, intersectionInfo.getNormal()), relativeCollisionPoint1) : glm::vec3(0.0f, 0.0f, 0.0f);
                 const glm::vec3 theta2 = body2->canRotate() ? glm::cross(invI2 * glm::cross(relativeCollisionPoint2, intersectionInfo.getNormal()), relativeCollisionPoint2) : glm::vec3(0.0f, 0.0f, 0.0f);
@@ -72,17 +72,13 @@ void PhysicsEngine::tick(float delta) {
 
                 const glm::vec3 impulse = j * intersectionInfo.getNormal();
 
+                std::cout << glm::to_string(relativeCollisionPoint2) << '\n';
+
                 body1->applyImpulse(relativeCollisionPoint1, invI1, impulse);
                 body2->applyImpulse(relativeCollisionPoint2, invI2, -impulse);
-                /*body1->setVelocity(body1->getVelocity() - impulse / body1->getMass());
-                body2->setVelocity(body2->getVelocity() + impulse / body2->getMass());
 
-                if (body1->canRotate()) {
-                    body1->setAngularVelocity(body1->getAngularVelocity() - invI1 * glm::cross(relativeCollisionPoint1, impulse));
-                }
-                if (body2->canRotate()) {
-                    body2->setAngularVelocity(body2->getAngularVelocity() + invI2 * glm::cross(relativeCollisionPoint2, impulse));
-                }*/
+                std::cout << glm::to_string(body2->getAngularVelocity()) << '\n';
+                std::cout << '\n';
 
                 /* Friction */
                 /*const float friction = body1->getPhysicsMaterial().friction * pair.second->getPhysicsMaterial().friction;
@@ -294,14 +290,20 @@ void RigidBody::tick(const std::vector<ForceField::Ref>& forceFields, float delt
         for (const ForceField::Ref& forceField : forceFields) {
             additionalAcceleration += forceField->getAcceleration(position);
         }
-        //velocity += delta * (acceleration + additionalAcceleration);
-        //position += delta * velocity;
         integrateMotion(forceFields, delta);
 
         if (canRotate()) {
             rotation = glm::quat{delta * angularVelocity} * rotation;
         }
-    }    
+
+        if (material.linearDamping > 0) {
+            velocity *= std::min(1.0f - material.linearDamping * delta, 1.0f);
+        }
+
+        if (material.angularDamping > 0) {
+            angularVelocity *= std::min(1.0f - material.angularDamping * delta, 1.0f);
+        }
+    }
 
     if (transformTree != nullptr) {
         transformTree->transform.setTranslation(position);
@@ -512,27 +514,6 @@ CapsuleCollider::CapsuleCollider(float halfLength, float radius) :
     radius(radius)
 {}
 
-/*
-const float oneDiv3 = (float)(1.0 / 3.0);
-const float oneDiv8 = (float)(1.0 / 8.0);
-const float oneDiv12 = (float)(1.0 / 12.0);
-void ComputeRigidBodyProperties_Capsule(float capsuleHeight, float capsuleRadius, float density, float & mass, float3 & centerOfMass, float3x3 & inertia) {
-  float cM; // cylinder mass
-  float hsM; // mass of hemispheres
-  float rSq = capsuleRadius * capsuleRadius;
-  cM = PI * capsuleHeight * rSq * density;
-  hsM = PI_TIMES2 * oneDiv3 * rSq * capsuleRadius * density; // from cylinder
-  inertia._22 = rSq * cM * 0.5 f;
-  inertia._11 = inertia._33 = inertia._22 * 0.5 f + cM * capsuleHeight * capsuleHeight * oneDiv12; // from hemispheres
-  float temp0 = hsM * 2.0 f * rSq / 5.0 f;
-  inertia._22 += temp0 * 2.0 f;
-  float temp1 = capsuleHeight * 0.5 f;
-  float temp2 = temp0 + hsM * (temp1 * temp1 + 3.0 f * oneDiv8 * capsuleHeight * capsuleRadius);
-  inertia._11 += temp2 * 2.0 f;
-  inertia._33 += temp2 * 2.0 f;
-  inertia._12 = inertia._13 = inertia._21 = inertia._23 = inertia._31 = inertia._32 = 0.0 f;
-  mass = cM + hsM * 2.0 f;
-}*/
 
 glm::mat3 CapsuleCollider::getInertiaTensor(float mass) const {
     const float length = 2.0f * halfLength;
@@ -555,7 +536,7 @@ geometry::DiscreteIntersectionInfo CapsuleCollider::getCollisionInfoSphere(const
 }
 
 geometry::BoundingBox CapsuleCollider::getBoundingBox(const glm::vec3& position, const glm::quat& rotation) const {
-    auto [capsuleCenter1, capsuleCenter2] = geometry::capsuleCenters(position, rotation, halfLength);
+    auto [capsuleCenter1, capsuleCenter2] = geometry::capsuleHemispheres(position, rotation, halfLength);
     return geometry::capsuleBoundingBox(capsuleCenter1, capsuleCenter2, radius);
 }
 

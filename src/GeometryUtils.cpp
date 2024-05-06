@@ -2,12 +2,18 @@
 
 #include <glm/gtx/norm.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtx/matrix_operation.hpp>
 
 #include <iostream>
 #include <cmath>
 #include <algorithm>
 #include <deque>
 #include <stdexcept>
+
+#include <Mesh.hpp>
+#include <Scene.hpp>
+extern Mesh* globalEarthMesh;
+extern Scene* scenePointer;
 
 /*IntersectionInfo& IntersectionInfo::invert() {
     normal = -normal;
@@ -60,9 +66,9 @@ namespace geometry {
         return RaycastInfo();
     }
 
-    DiscreteIntersectionInfo::DiscreteIntersectionInfo(const std::vector<glm::vec3>& intersectionPolygon, const glm::vec3& normal, float penetration) :
+    DiscreteIntersectionInfo::DiscreteIntersectionInfo(const glm::vec3& intersectionPoint, const glm::vec3& normal, float penetration) :
         doesIntersect(true),
-        intersectionPolygon(intersectionPolygon),
+        intersectionPoint(intersectionPoint),
         normal(normal),
         penetration(penetration)
     {}
@@ -75,11 +81,11 @@ namespace geometry {
         return doesIntersect;
     }
 
-    std::vector<glm::vec3> DiscreteIntersectionInfo::getIntersectionPolygon() const {
+    glm::vec3 DiscreteIntersectionInfo::getIntersectionPoint() const {
         if (!doesIntersect) {
-            throw std::runtime_error("Cannot get the intersection polygon of a non-intersecting test");
+            throw std::runtime_error("Cannot get the intersection point of a non-intersecting test");
         }
-        return intersectionPolygon;
+        return intersectionPoint;
     }
 
     glm::vec3 DiscreteIntersectionInfo::getNormal() const {
@@ -97,7 +103,7 @@ namespace geometry {
     }
 
     DiscreteIntersectionInfo DiscreteIntersectionInfo::getInverse() const {
-        return doesIntersect ? DiscreteIntersectionInfo(intersectionPolygon, normal, penetration) : DiscreteIntersectionInfo();
+        return doesIntersect ? DiscreteIntersectionInfo(intersectionPoint, normal, penetration) : DiscreteIntersectionInfo();
     }
 
     DiscreteIntersectionInfo DiscreteIntersectionInfo::none() {
@@ -145,33 +151,44 @@ namespace geometry {
         }
 
         return DiscreteIntersectionInfo(
-            geometry::translatePoints(geometry::intersectingConvexPolygon(points1, points2, -normal), -normal * 0.5f * penetration),
+            glm::vec3(0.0f, 0.0f, 0.0f),//translatePoints(intersectingConvexPolygon(points1, points2, -normal), -normal * 0.5f * penetration),
             normal,
             penetration
         );
     }
 
-    static bool gjkNearestSimplexLine(std::deque<glm::vec3>& simplex, glm::vec3& direction) {
-        glm::vec3 a = simplex[0];
-        glm::vec3 b = simplex[1];
+    std::function<bool(const glm::vec3&, const glm::vec3&)> sweepSortingFunction(const glm::vec3& direction) {
+        return [&direction](const glm::vec3& a, const glm::vec3& b) {
+            return glm::dot(direction, a) < glm::dot(direction, b);
+        };
+    }
+
+    static bool gjkNearestSimplexLine(std::deque<std::array<glm::vec3, 3>>& simplex, glm::vec3& direction) {
+        std::array<glm::vec3, 3> sa = simplex[0];
+        std::array<glm::vec3, 3> sb = simplex[1];
+        glm::vec3 a = sa[0];
+        glm::vec3 b = sb[0];
         glm::vec3 ab = b - a;
         glm::vec3 ao = -a;
 
         if (glm::dot(ab, ao) > 0.0f) {
-            direction = glm::cross(ab, glm::cross(ao, ab));
+            direction = glm::cross(glm::cross(ab, ao), ab);
         }
         else {
-            simplex = {a};
+            simplex = {sa};
             direction = ao;
         }
 
         return false;
     }
 
-    static bool gjkNearestSimplexTriangle(std::deque<glm::vec3>& simplex, glm::vec3& direction) {
-        glm::vec3 a = simplex[0];
-        glm::vec3 b = simplex[1];
-        glm::vec3 c = simplex[2];
+    static bool gjkNearestSimplexTriangle(std::deque<std::array<glm::vec3, 3>>& simplex, glm::vec3& direction) {
+        std::array<glm::vec3, 3> sa = simplex[0];
+        std::array<glm::vec3, 3> sb = simplex[1];
+        std::array<glm::vec3, 3> sc = simplex[2];
+        glm::vec3 a = sa[0];
+        glm::vec3 b = sb[0];
+        glm::vec3 c = sc[0];
         glm::vec3 ab = b - a;
         glm::vec3 ac = c - a;
         glm::vec3 ao = -a;
@@ -180,18 +197,18 @@ namespace geometry {
         
         if (glm::dot(glm::cross(abc, ac), ao) > 0.0f) {
             if (glm::dot(ac, ao) > 0.0f) {
-                simplex = {a, c};
-                direction = glm::cross(cross(ac, ao), ac);
+                simplex = {sa, sc};
+                direction = glm::cross(glm::cross(ac, ao), ac);
             }
 
             else {
-                simplex = {a, b};
+                simplex = {sa, sb};
                 return gjkNearestSimplexLine(simplex, direction);
             }
         }
         else {
             if (glm::dot(glm::cross(ab, abc), ao) > 0.0f) {
-                simplex = {a, b};
+                simplex = {sa, sb};
                 return gjkNearestSimplexLine(simplex, direction);
             }
 
@@ -201,7 +218,7 @@ namespace geometry {
                 }
 
                 else {
-                    simplex = {a, c, b};
+                    simplex = {sa, sc, sb};
                     direction = -abc;
                 }
             }
@@ -210,11 +227,15 @@ namespace geometry {
         return false;
     }
 
-    static bool gjkNearestSimplexTetrahedron(std::deque<glm::vec3>& simplex, glm::vec3& direction) {
-        glm::vec3 a = simplex[0];
-        glm::vec3 b = simplex[1];
-        glm::vec3 c = simplex[2];
-        glm::vec3 d = simplex[3];
+    static bool gjkNearestSimplexTetrahedron(std::deque<std::array<glm::vec3, 3>>& simplex, glm::vec3& direction) {
+        std::array<glm::vec3, 3> sa = simplex[0];
+        std::array<glm::vec3, 3> sb = simplex[1];
+        std::array<glm::vec3, 3> sc = simplex[2];
+        std::array<glm::vec3, 3> sd = simplex[3];
+        glm::vec3 a = sa[0];
+        glm::vec3 b = sb[0];
+        glm::vec3 c = sc[0];
+        glm::vec3 d = sd[0];
 
         glm::vec3 ab = b - a;
         glm::vec3 ac = c - a;
@@ -226,24 +247,24 @@ namespace geometry {
         glm::vec3 adb = glm::cross(ad, ab);
     
         if (glm::dot(abc, ao) > 0.0f) {
-            simplex = {a, b, c};
+            simplex = {sa, sb, sc};
             return gjkNearestSimplexTriangle(simplex, direction);
         }
             
         if (glm::dot(acd, ao) > 0.0f) {
-            simplex = {a, c, d};
+            simplex = {sa, sc, sd};
             return gjkNearestSimplexTriangle(simplex, direction);
         }
     
         if (glm::dot(adb, ao) > 0.0f) {
-            simplex = {a, d, b};
+            simplex = {sa, sd, sb};
             return gjkNearestSimplexTriangle(simplex, direction);
         }
 
         return true;
     }
 
-    static bool gjkNearestSimplex(std::deque<glm::vec3>& nearestSimplex, glm::vec3& direction) {
+    static bool gjkNearestSimplex(std::deque<std::array<glm::vec3, 3>>& nearestSimplex, glm::vec3& direction) {
         switch (nearestSimplex.size()) {
             case 2 :
                 return gjkNearestSimplexLine(nearestSimplex, direction);
@@ -256,15 +277,15 @@ namespace geometry {
         }
     }
 
-    static std::pair<std::vector<glm::vec4>, std::size_t> gjkGetFaceNormals(const std::deque<glm::vec3>& polytope, const std::vector<std::size_t>& faces) {
+    static std::pair<std::vector<glm::vec4>, std::size_t> gjkGetFaceNormals(std::deque<std::array<glm::vec3, 3>>& polytope, const std::vector<std::size_t>& faces) {
         std::vector<glm::vec4> normals;
         std::size_t minTriangle = 0;
         float minDistance = std::numeric_limits<float>::infinity();
 
         for (std::size_t i = 0; i < faces.size(); i += 3) {
-            glm::vec3 a = polytope[faces[i]];
-            glm::vec3 b = polytope[faces[i + 1]];
-            glm::vec3 c = polytope[faces[i + 2]];
+            glm::vec3 a = polytope[faces[i]][0];
+            glm::vec3 b = polytope[faces[i + 1]][0];
+            glm::vec3 c = polytope[faces[i + 2]][0];
 
             glm::vec3 normal = glm::normalize(glm::cross(b - a, c - a));
             float distance = glm::dot(normal, a);
@@ -295,13 +316,12 @@ namespace geometry {
         if (reverse != edges.end()) {
             edges.erase(reverse);
         }
-    
         else {
             edges.emplace_back(faces[a], faces[b]);
         }
     }
 
-    static DiscreteIntersectionInfo gjkEpa(const std::vector<glm::vec3>& points1, const std::vector<glm::vec3>& points2, std::deque<glm::vec3>& simplex) {
+    static DiscreteIntersectionInfo gjkEpa(const std::vector<glm::vec3>& points1, const std::vector<glm::vec3>& points2, std::deque<std::array<glm::vec3, 3>>& simplex) {
         std::vector<std::size_t> faces = {
             0, 1, 2,
             0, 3, 1,
@@ -314,19 +334,21 @@ namespace geometry {
         glm::vec3 minNormal;
         float minDistance = std::numeric_limits<float>::max();
         
-        while (minDistance == std::numeric_limits<float>::max()) {
+        do {
             minNormal = glm::vec3(normals[minFace]);
             minDistance = normals[minFace].w;
-    
-            glm::vec3 support = geometry::convexSetSupportPoint(points1, minNormal) - geometry::convexSetSupportPoint(points2, -minNormal);
-    
+
+            glm::vec3 supportPoint1 = convexSetSupportPoint(points1, minNormal);
+            glm::vec3 supportPoint2 = convexSetSupportPoint(points2, -minNormal);
+            glm::vec3 support = supportPoint1 - supportPoint2;
+
             if (std::abs(glm::dot(minNormal, support) - minDistance) > 0.001f) {
                 minDistance = std::numeric_limits<float>::max();
 
                 std::vector<std::pair<std::size_t, std::size_t>> uniqueEdges;
 
                 for (std::size_t i = 0; i < normals.size(); ++i) {
-                    if (glm::dot(glm::vec3(normals[i]), support) > glm::dot(glm::vec3(normals[i]), simplex[faces[i*3]])) {
+                    if (glm::dot(glm::vec3(normals[i]), support) > glm::dot(glm::vec3(normals[i]), simplex[faces[i*3]][0])) {
                         std::size_t f = i * 3;
 
                         gjkAddUnique(uniqueEdges, faces, f, f + 1);
@@ -354,7 +376,7 @@ namespace geometry {
                     newFaces.push_back(simplex.size());
                 }
                 
-                simplex.push_back(support);
+                simplex.push_back({support, supportPoint1, supportPoint2});
 
                 auto [newNormals, newMinFace] = gjkGetFaceNormals(simplex, newFaces);
 
@@ -365,62 +387,120 @@ namespace geometry {
                         minFace = i;
                     }
                 }
-    
+
                 if (newNormals[newMinFace].w < oldMinDistance) {
                     minFace = newMinFace + normals.size();
                 }
-    
+
                 faces.insert(faces.end(), newFaces.begin(), newFaces.end());
                 normals.insert(normals.end(), newNormals.begin(), newNormals.end());
             }
-        }
+        } while (minDistance == std::numeric_limits<float>::max());
+
+        const auto [u, v, w] = barycentricCoordinates(glm::vec3(), simplex[faces[3 * minFace]][0], simplex[faces[3 * minFace + 1]][0], simplex[faces[3 * minFace + 2]][0]);
+        //std::cout << "u " << u << " v " << v << " w " << w << '\n';
+        //const glm::vec3 collisionPoint1 = u * simplex[faces[3 * minFace]][1] + v * simplex[faces[3 * minFace + 1]][1] + w * simplex[faces[3 * minFace + 2]][1];
+        const glm::vec3 collisionPoint2 = u * simplex[faces[3 * minFace]][2] + v * simplex[faces[3 * minFace + 1]][2] + w * simplex[faces[3 * minFace + 2]][2];
 
         return DiscreteIntersectionInfo(
-            geometry::translatePoints(geometry::intersectingConvexPolygon(points1, points2, minNormal), minNormal * 0.5f * minDistance),
+            collisionPoint2,
+            //minNormal * glm::dot(simplex[faces[3 * minFace]], minNormal),
             -minNormal,
             minDistance
         );
     }
 
     DiscreteIntersectionInfo gjk(const std::vector<glm::vec3>& points1, const std::vector<glm::vec3>& points2) {
-        glm::vec3 supportPoint = geometry::convexSetSupportPoint(points1, glm::vec3(1.0f, 0.0f, 0.0f)) - geometry::convexSetSupportPoint(points2, glm::vec3(-1.0f, 0.0f, 0.0f));
-        std::deque<glm::vec3> simplex = {supportPoint};
-        glm::vec3 direction = -supportPoint;
+        // TODO heuristique (vélocité au lieu d'un vecteur quelconque)
+        glm::vec3 supportPoint1 = convexSetSupportPoint(points1, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::vec3 supportPoint2 = convexSetSupportPoint(points2, glm::vec3(-1.0f, 0.0f, 0.0f));
+        glm::vec3 support = supportPoint1 - supportPoint2;
+        std::deque<std::array<glm::vec3, 3>> simplex = {{support, supportPoint1, supportPoint2}};
+        glm::vec3 direction = -support;
         
-        while (true) {
-            supportPoint = geometry::convexSetSupportPoint(points1, direction) - geometry::convexSetSupportPoint(points2, -direction);
-            if (glm::dot(supportPoint, direction) < 0.0f) {
+        // TODO I don't know why it crashes, but ignore faulty collisions for now... Set while(true) when fixed and remove i
+        int i = 0;
+        while (i++ < 20) {
+            supportPoint1 = convexSetSupportPoint(points1, direction);
+            supportPoint2 = convexSetSupportPoint(points2, -direction);
+            support = supportPoint1 - supportPoint2;
+            if (glm::dot(support, direction) < 0.0f) {
                 return DiscreteIntersectionInfo::none();
             }
             
-            simplex.push_front(supportPoint);
+            simplex.push_front({support, supportPoint1, supportPoint2});
 
             if (gjkNearestSimplex(simplex, direction)) {
                 return gjkEpa(points1, points2, simplex);
             }
         }
+
+        return DiscreteIntersectionInfo::none(); 
     }
 
-    glm::vec3 closestPointOnTriangle(const glm::vec3& p, const glm::vec3& a, const glm::vec3& b, const glm::vec3& c) {
-        const glm::vec3 ab = b - a;
-        const glm::vec3 ac = c - a;
-        const glm::vec3 ap = p - a;
+    glm::vec3 closestPointOnLine(const glm::vec3& point, const glm::vec3& a, const glm::vec3& b, bool closed) {
+        glm::vec3 ab = b - a;
+        const float t = glm::dot(point - a, ab) / glm::dot(ab, ab);
+        return a + (closed ? std::clamp(t, 0.0f, 1.0f) : t);
+    }
 
-        const float acac = glm::dot(ac, ac);
-        const float acap = glm::dot(ac, ap);
-        const float abab = glm::dot(ab, ab);
-        const float abac = glm::dot(ab, ac);
-        const float abap = glm::dot(ab, ap);
+    std::pair<glm::vec3, glm::vec3> closestPointsOnLines(const glm::vec3& a1, const glm::vec3& a2, const glm::vec3& b1, const glm::vec3& b2, bool closed1, bool closed2) {
+        const glm::vec3 d = b1 - a1;
+        const glm::vec3 u = a2 - a1;
+        const glm::vec3 v = b2 - b1;
 
-        const float d = 1.0f / (acac * abab - abac * abac);
-        const float u = std::clamp((abab * acap - abac * abap) * d, 0.0f, 1.0f);
-        const float v = std::clamp((acac * abap - abac * acap) * d, 0.0f, 1.0f);
+        const float du = glm::dot(d, u);
+        const float dv = glm::dot(d, v);
+        const float uu = glm::dot(u, u);
+        const float uv = glm::dot(u, v);
+        const float vv = glm::dot(v, v);
 
-        return a + u * ac + v * ab;
+        const float det = uu * vv - uv * uv;
+
+        float s;
+        float t;
+
+        if (det < glm::epsilon<float>()) {
+            s = du / uu;
+            t = 0.0f;
+        }
+        else {
+            const float invDet = 1.0f / det;
+            s = (du * vv - dv * uv) * invDet;
+            t = (du * uv - dv * uu) * invDet;
+        }
+
+        if (closed1) {
+            s = std::clamp(s, 0.0f, 1.0f);
+        }
+        if (closed2) {
+            t = std::clamp(t, 0.0f, 1.0f);
+        }
+
+        float sp = (t * uv + du) / uu;
+        float tp = (s * uv - dv) / vv;
+
+        if (closed1) {
+            sp = std::clamp(sp, 0.0f, 1.0f);
+        }
+        if (closed2) {
+            tp = std::clamp(tp, 0.0f, 1.0f);
+        }
+
+        return {a1 + sp * u, b1 + tp * v};
+    }
+
+    glm::vec3 closestPointOnTriangle(const glm::vec3& point, const glm::vec3& a, const glm::vec3& b, const glm::vec3& c) {
+        const auto [u, v, w] = barycentricCoordinates(point, a, b, c);
+        return u * a + v * b + w * c;
     }
 
     RaycastInfo raycastSphere(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, const glm::vec3& spherePosition, float sphereRadius) {
         return RaycastInfo::none();
+    }
+
+    glm::vec3 arbitraryOrthogonal(const glm::vec3& direction) {
+        return glm::cross(direction, direction.x == 0.0f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
     glm::vec3 convexSetSupportPoint(const std::vector<glm::vec3>& convexSet, const glm::vec3& direction) {
@@ -431,6 +511,22 @@ namespace geometry {
             if (dot > maxDot) {
                 maxDot = dot;
                 supportPoint = point;
+            }
+        }
+        return supportPoint;
+    }
+
+    std::array<glm::vec3, 3> convexSetSupportTriangle(const std::vector<glm::vec3>& convexSet, const glm::vec3& direction) {
+        float maxDot[3] = {-std::numeric_limits<float>::infinity()};
+        std::array<glm::vec3, 3> supportPoint;
+        for (const glm::vec3& point : convexSet) {
+            float dot = glm::dot(point, direction);
+            for (int i = 0; i < 3; ++i) {
+                if (dot > maxDot[i]) {
+                    maxDot[i] = dot;
+                    supportPoint[i] = point;
+                    break;
+                }
             }
         }
         return supportPoint;
@@ -454,21 +550,17 @@ namespace geometry {
         return supportPlane;
     }
 
-    // todo tetrahedralization
     std::vector<std::array<glm::vec3, 4>> convexSetTetrahedralization(const std::vector<glm::vec3>& convexSet) {
         if (convexSet.size() < 4) {
             throw std::runtime_error("Convex set of size less than 4 (" + std::to_string(convexSet.size()) + ") cannot be broken down into tetrahedra");
         }
 
         std::vector<std::array<glm::vec3, 4>> tetrahedra;
-        /*for (std::size_t i = 1; i < convexSet.size() - 2; ++i) {
-            for (std::size_t j = i + 1; j < convexSet.size() - 1; ++j) {
-                for (std::size_t k = j + 1; k < convexSet.size(); ++k) {
-                    tetrahedra.push_back({convexSet[0], convexSet[i], convexSet[j], convexSet[k]});
-                }
-            }
-        }*/
-
+        std::vector<glm::vec3> sortedConvexSet = convexSet;
+        std::sort(sortedConvexSet.begin(), sortedConvexSet.end(), sweepSortingFunction(glm::vec3(1.0f, 0.0f, 0.0f)));
+        for (std::size_t i = 1; i < sortedConvexSet.size() - 2; ++i) {
+            tetrahedra.push_back({sortedConvexSet[0], sortedConvexSet[i], sortedConvexSet[i + 1], sortedConvexSet[i + 2]});
+        }
         return tetrahedra;
     }
 
@@ -496,18 +588,6 @@ namespace geometry {
         }
 
         return barycenter / totalMass;
-    }
-
-    float tetrahedronVolume(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& d) {
-        return std::abs(glm::dot(a - d, glm::cross(b - d, c - d))) / 6.0f;
-    }
-
-    float convexSetVolume(const std::vector<glm::vec3>& convexSet) {
-        float volume = 0.0f;
-        for (auto [a, b, c, d] : convexSetTetrahedralization(convexSet)) {
-            volume += tetrahedronVolume(a, b, c, d);
-        }
-        return volume;
     }
 
     std::vector<glm::vec3> getBoxVertices(const glm::vec3& halfLengths) {
@@ -546,18 +626,37 @@ namespace geometry {
         if (rotation == glm::identity<glm::quat>()) {
             return translatePoints(points, translation);
         }
-        std::vector<glm::vec3> translatedPoints(points.size());
+        std::vector<glm::vec3> transformedPoints(points.size());
         for (std::size_t i = 0; i < points.size(); ++i) {
-            translatedPoints[i] = rotation * points[i] + translation;
+            transformedPoints[i] = rotation * points[i] + translation;
         }
-        return translatedPoints;
+        return transformedPoints;
     }
 
-    std::pair<glm::vec3, glm::vec3> capsuleCenters(const glm::vec3& position, const glm::quat& rotation, float halfLength) {
+    std::pair<glm::vec3, glm::vec3> capsuleHemispheres(const glm::vec3& position, const glm::quat& rotation, float halfHeight) {
         return std::make_pair(
-            position + rotation * glm::vec3(0.0f, -halfLength, 0.0f),
-            position + rotation * glm::vec3(0.0f, halfLength, 0.0f)
+            position + rotation * glm::vec3(0.0f, -halfHeight, 0.0f),
+            position + rotation * glm::vec3(0.0f, halfHeight, 0.0f)
         );
+    }
+
+    std::array<float, 3> barycentricCoordinates(const glm::vec3& point, const glm::vec3& a, const glm::vec3& b, const glm::vec3& c) {
+        const glm::vec3 d = point - a;
+        const glm::vec3 u = b - a;
+        const glm::vec3 v = c - a;
+
+        const float du = glm::dot(d, u);
+        const float dv = glm::dot(d, v);
+        const float uu = glm::dot(u, u);
+        const float uv = glm::dot(u, v);
+        const float vv = glm::dot(v, v);
+
+        const float invDet = 1.0f / (vv * uu - uv * uv);
+        const float cu = std::clamp((uu * dv - uv * du) * invDet, 0.0f, 1.0f);
+        const float cv = std::clamp((vv * du - uv * dv) * invDet, 0.0f, 1.0f);
+        const float cw = std::clamp(1.0f - cu - cv, 0.0f, 1.0f);
+
+        return {cu, cv, cw};
     }
 
     BoundingBox sphereBoundingBox(const glm::vec3& center, float radius) {
@@ -589,56 +688,8 @@ namespace geometry {
     }
 
     glm::vec3 closestPointOnPlane(const glm::vec3& point, const glm::vec3& a, const glm::vec3& b, const glm::vec3& c) {
-        // todo possible without normalization
-        glm::vec3 normal = glm::normalize(glm::cross(b - a, c - a));
-        glm::vec3 closestPoint = point - (glm::dot(normal, point) - glm::dot(normal, a)) * normal;
-        return closestPoint;
-    }
-
-    std::vector<glm::vec3> intersectingConvexPolygon(const std::vector<glm::vec3>& points1, const std::vector<glm::vec3>& points2, const glm::vec3& direction) {
-        std::vector<glm::vec3> supportPlane1 = convexSetSupportPlane(points1, direction);
-        std::vector<glm::vec3> supportPlane2 = convexSetSupportPlane(points2, -direction);
-
-        if (supportPlane1.size() == 1) {
-            return {supportPlane1[0]};
-        }
-        else if (supportPlane2.size() == 1) {
-            return {supportPlane2[0]};
-        }
-
-        // todo
-        /*glm::vec3 sweepingDirection = glm::cross(direction, glm::vec3(1, 0, 0));
-        if (sweepingDirection == glm::vec3()) {
-            sweepingDirection = glm::cross(direction, glm::vec3(0, 1, 0));
-        }
-
-        const auto sweepSortingFunction = [&sweepingDirection](const glm::vec3& a, const glm::vec3& b) {
-            return glm::dot(sweepingDirection, a) < glm::dot(sweepingDirection, b);
-        };
-
-        std::vector<glm::vec3> sortedPoints1 = points1;
-        std::vector<glm::vec3> sortedPoints2 = points2;
-        std::sort(points1.begin(), points1.end(), sweepSortingFunction);
-        std::sort(points2.begin(), points2.end(), sweepSortingFunction);
-
-        std::vector<glm::vec3> firstHalf1;
-        std::vector<glm::vec3> firstHalf2;
-        std::vector<glm::vec3> secondHalf1;
-        std::vector<glm::vec3> secondHalf2;
-
-        firstHalf1.push_back(points1[0]);
-        secondHalf1.push_back(points1[0]);
-        for (std::size_t i{1}; i < points1.size(); ++i) {
-            const glm::vec3 difference{points1[i] - points1[0]};
-            if (glm::dot(glm::cross(difference, sweepingDirection), difference) > 0) {
-                firstHalf1.push_back(points1[i]);
-            }
-            else {
-                secondHalf1.push_back(points1[i]);
-            }
-        }*/
-
-        return {supportPlane2[0]};
+        glm::vec3 normal = glm::cross(b - a, c - a);
+        return point - (glm::dot(normal, point) - glm::dot(normal, a)) * normal;
     }
 
     DiscreteIntersectionInfo AABBAABBIntersection(const glm::vec3& position1, const glm::vec3& halfLength1, const glm::vec3& position2, const glm::vec3 halfLength2) {
@@ -647,23 +698,41 @@ namespace geometry {
         if (glm::all(glm::lessThanEqual(difference, sumSize))) {
             const glm::vec3 penetration{sumSize - difference};
             if (penetration.x < penetration.y && penetration.x < penetration.z) {
+                const glm::vec3 normal = glm::vec3(position1.x >= position2.x ? 1.0f : -1.0f, 0.0f, 0.0f);
+
                 return DiscreteIntersectionInfo(
-                    {((halfLength1.x - 0.5f * penetration) / sumSize.x) * (position2 - position1)},
-                    glm::vec3(position1.x >= position2.x ? 1.0f : -1.0f, 0.0f, 0.0f),
+                    glm::vec3(
+                        position1.x - halfLength1.x * normal.x - 0.5f * penetration.x,
+                        0.5f * (std::max(position1.y - halfLength1.y, position2.y - halfLength2.y) + std::min(position1.y + halfLength1.y, position2.y + halfLength2.y)),
+                        0.5f * (std::max(position1.z - halfLength1.z, position2.z - halfLength2.z) + std::min(position1.z + halfLength1.z, position2.z + halfLength2.z))
+                    ),
+                    normal,
                     penetration.x
                 );
             }
             else if (penetration.y < penetration.x && penetration.y < penetration.z) {
+                const glm::vec3 normal = glm::vec3(0.0f, position1.y >= position2.y ? 1.0f : -1.0f, 0.0f);
+
                 return DiscreteIntersectionInfo(
-                    {((halfLength1.y - 0.5f * penetration) / sumSize.y) * (position2 - position1)},
-                    glm::vec3(0.0f, position1.y >= position2.y ? 1.0f : -1.0f, 0.0f),
+                    glm::vec3(
+                        0.5f * (std::max(position1.x - halfLength1.x, position2.x - halfLength2.x) + std::min(position1.x + halfLength1.x, position2.x + halfLength2.x)),
+                        position1.y - halfLength1.y * normal.y - 0.5f * penetration.y,
+                        0.5f * (std::max(position1.z - halfLength1.z, position2.z - halfLength2.z) + std::min(position1.z + halfLength1.z, position2.z + halfLength2.z))
+                    ),
+                    normal,
                     penetration.y
                 );
             }
             else {
+                const glm::vec3 normal = glm::vec3(0.0f, 0.0f, position1.z >= position2.z ? 1.0f : -1.0f);
+
                 return DiscreteIntersectionInfo(
-                    {((halfLength1.z - 0.5f * penetration) / sumSize.z) * (position2 - position1)},
-                    glm::vec3(0.0f, 0.0f, position1.z >= position2.z ? 1.0f : -1.0f),
+                    glm::vec3(
+                        0.5f * (std::max(position1.x - halfLength1.x, position2.x - halfLength2.x) + std::min(position1.x + halfLength1.x, position2.x + halfLength2.x)),
+                        0.5f * (std::max(position1.y - halfLength1.z, position2.y - halfLength2.y) + std::min(position1.y + halfLength1.y, position2.y + halfLength2.y)),
+                        position1.z - halfLength1.z * normal.z - 0.5f * penetration.z
+                    ),
+                    normal,
                     penetration.z
                 );
             }
@@ -673,9 +742,15 @@ namespace geometry {
 
     DiscreteIntersectionInfo boxBoxIntersection(const glm::vec3& position1, const glm::quat& rotation1, const glm::vec3& halfLength1, const glm::vec3& position2, const glm::quat& rotation2, const glm::vec3 halfLength2) {
         if (rotation1 == glm::identity<glm::quat>() && rotation2 == glm::identity<glm::quat>()) {
-            return AABBAABBIntersection(position1, position2, halfLength1, halfLength2);
+            return AABBAABBIntersection(position1, halfLength1, position2, halfLength2);
         }
-        std::vector<glm::vec3> axes(6);
+
+        return gjk(
+            transformPoints(getBoxVertices(halfLength1), position1, rotation1),
+            transformPoints(getBoxVertices(halfLength2), position2, rotation2)
+        );
+
+        /*std::vector<glm::vec3> axes(6);
         axes[0] = rotation1 * glm::vec3(1.0f, 0.0f, 0.0f);
         axes[1] = rotation1 * glm::vec3(0.0f, 1.0f, 0.0f);
         axes[2] = rotation1 * glm::vec3(0.0f, 0.0f, 1.0f);
@@ -694,10 +769,10 @@ namespace geometry {
         }
 
         return sat(
-            geometry::transformPoints(geometry::getBoxVertices(halfLength1), position1, rotation1),
-            geometry::transformPoints(geometry::getBoxVertices(halfLength2), position2, rotation2),
+            transformPoints(getBoxVertices(halfLength1), position1, rotation1),
+            transformPoints(getBoxVertices(halfLength2), position2, rotation2),
             axes
-        );
+        );*/
     }
 
     DiscreteIntersectionInfo boxSphereIntersection(const glm::vec3& position1, const glm::quat& rotation, const glm::vec3& halfLength, const glm::vec3& position2, float radius) {
@@ -729,7 +804,7 @@ namespace geometry {
                 normal = axes[2] / halfLength.z;
             }
             return DiscreteIntersectionInfo(
-                {position2 + 0.5f * penetration * normal},
+                position2 + 0.5f * penetration * normal,
                 normal,
                 penetration
             );
@@ -740,13 +815,13 @@ namespace geometry {
             for (int i = 0; i < 3; ++i) {
                 closestPointPosition += axes[i] * normalizedPosition[i];
             }
-            return geometry::pointSphereIntersection(closestPointPosition + position1, position2, radius);
+            return pointSphereIntersection(closestPointPosition + position1, position2, radius);
         }
     }
 
-    DiscreteIntersectionInfo boxCapsuleIntersection(const glm::vec3& position1, const glm::quat& rotation, const glm::vec3& halfLength1, const glm::vec3& position2, const glm::quat& rotation2, float halfLength2, float radius) {
-        //return boxSphereIntersection()
-        return DiscreteIntersectionInfo::none();
+    DiscreteIntersectionInfo boxCapsuleIntersection(const glm::vec3& position1, const glm::quat& rotation1, const glm::vec3& halfLength, const glm::vec3& position2, const glm::quat& rotation2, float halfHeight, float radius) {
+        // TODO Il existe peut être d'autres approches plus simples pour des boîtes...
+        return capsuleConvexIntersection(position2, rotation2, halfHeight, radius, position1, rotation1, getBoxVertices(halfLength)).getInverse();
     }
 
     DiscreteIntersectionInfo pointSphereIntersection(const glm::vec3& pointPosition, const glm::vec3& center, float radius) {
@@ -760,7 +835,7 @@ namespace geometry {
             const glm::vec3 normal = glm::normalize(center1 - center2);
             const float penetration = radiiSum - std::sqrt(distanceSquared);
             return DiscreteIntersectionInfo(
-                {center2 + normal * (radius2 - 0.5f * penetration)},
+                center2 + normal * (radius2 - 0.5f * penetration),
                 normal,
                 penetration
             );
@@ -769,7 +844,7 @@ namespace geometry {
     }
     
     DiscreteIntersectionInfo sphereCapsuleIntersection(const glm::vec3& position1, float radius1, const glm::vec3& position2, const glm::quat& rotation, float halfLength, float radius2) {
-        auto [capsuleCenter1, capsuleCenter2] = capsuleCenters(position2, rotation, halfLength);
+        auto [capsuleCenter1, capsuleCenter2] = capsuleHemispheres(position2, rotation, halfLength);
         const glm::vec3 lineDifference = capsuleCenter2 - capsuleCenter1;
         const glm::vec3 pointDifference = position2 - position1;
         const float linePosition = std::clamp(glm::dot(lineDifference, pointDifference) / glm::length2(lineDifference), 0.0f, 1.0f);
@@ -777,10 +852,140 @@ namespace geometry {
         return sphereSphereIntersection(pointPosition, radius2, position1, radius1);
     }
 
+    DiscreteIntersectionInfo sphereConvexIntersection(const glm::vec3& position1, float radius, const glm::vec3& position2, const glm::quat& rotation, const std::vector<glm::vec3> vertices) {
+        const std::vector<glm::vec3> transformedVertices = transformPoints(vertices, position2, rotation);
+        const glm::vec3 direction = position1 - uniformConvexSetBarycenter(transformedVertices);
+        const auto [a, b, c] = convexSetSupportTriangle(transformedVertices, direction);
+        const glm::vec3 closestPoint = closestPointOnTriangle(position1, a, b, c);
+        return pointSphereIntersection(position1, closestPoint, radius);
+    }
+
+    DiscreteIntersectionInfo capsuleConvexIntersection(const glm::vec3& position1, const glm::quat& rotation1, float halfHeight, float radius, const glm::vec3& position2, const glm::quat& rotation2, const std::vector<glm::vec3> vertices) {
+        const std::vector<glm::vec3> transformedVertices = transformPoints(vertices, position2, rotation2);
+        const auto [hemisphere1, hemisphere2] = capsuleHemispheres(position1, rotation1, halfHeight);
+        const glm::vec3 direction = closestPointOnLine(position1, hemisphere1, hemisphere2, true) - uniformConvexSetBarycenter(transformedVertices);
+        const auto [a, b, c] = convexSetSupportTriangle(transformedVertices, direction);
+        const glm::vec3 closestPoint = closestPointOnTriangle(position1, a, b, c);
+        return pointSphereIntersection(position1, closestPoint, radius);
+    }
+
+    DiscreteIntersectionInfo capsuleCapsuleIntersection(const glm::vec3& position1, const glm::quat& rotation1, float halfHeight1, float radius1, const glm::vec3& position2, const glm::quat& rotation2, float halfHeight2, float radius2) {
+        const auto [hemisphere11, hemisphere12] = capsuleHemispheres(position1, rotation1, halfHeight1);
+        const auto [hemisphere21, hemisphere22] = capsuleHemispheres(position2, rotation2, halfHeight2);
+        const auto [closestPoint1, closestPoint2] = closestPointsOnLines(hemisphere11, hemisphere12, hemisphere21, hemisphere22, true, true);
+        return sphereSphereIntersection(closestPoint1, radius1, closestPoint2, radius2);
+    }
+
     DiscreteIntersectionInfo convexConvexIntersection(const glm::vec3& position1, const glm::quat& rotation1, const std::vector<glm::vec3>& vertices1, const glm::vec3& position2, const glm::quat& rotation2, const std::vector<glm::vec3>& vertices2) {
         return gjk(
             transformPoints(vertices1, position1, rotation1),
             transformPoints(vertices2, position2, rotation2)
         );
+    }
+
+    // Volume
+
+    float tetrahedronVolume(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& d) {
+        return std::abs(glm::dot(a - d, glm::cross(b - d, c - d))) / 6.0f;
+    }
+
+    float sphereVolume(float radius) {
+        return 4.0f / 3.0f * glm::pi<float>() * radius * radius * radius;
+    }
+
+    float boxVolume(const glm::vec3& halfLengths) {
+        return 8.0f * (halfLengths.x * halfLengths.y * halfLengths.z);
+    }
+
+    float convexSetVolume(const std::vector<glm::vec3>& convexSet) {
+        float volume = 0.0f;
+        for (auto [a, b, c, d] : convexSetTetrahedralization(convexSet)) {
+            volume += tetrahedronVolume(a, b, c, d);
+        }
+        return volume;
+    }
+
+    float cylinderVolume(float radius, float halfHeight) {
+        return 2.0f * halfHeight * radius * radius * glm::pi<float>();
+    }
+
+    float capsuleVolume(float radius, float halfHeight) {
+        return cylinderVolume(radius, halfHeight) + sphereVolume(radius);
+    }
+
+    // Inertia
+
+    glm::mat3 shiftInertia(const glm::mat3& inertiaTensor, const glm::vec3& shift) {
+        const glm::vec3 sq{shift * shift};
+        const float xy{-shift.x * shift.y};
+        const float xz{-shift.x * shift.z};
+        const float yz{-shift.y * shift.z};
+        return inertiaTensor + glm::mat3(
+            sq.y + sq.z, xy, xz,
+            xy, sq.x + sq.y, yz,
+            xz, yz, sq.x + sq.y
+        );
+    }
+
+    glm::mat3 rotateInertiaTensor(const glm::mat3& inertiaTensor, const glm::quat& rotation) {
+        glm::mat3 rotationMatrix = glm::mat3_cast(rotation);
+        return glm::transpose(rotationMatrix) * inertiaTensor * rotationMatrix;
+    }
+
+    glm::mat3 tetrahedronInertiaTensor(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& d) {
+        const float v = 0.05f * tetrahedronVolume(a, b, c, d);
+        const glm::vec3 s2 = c + d;
+        const glm::vec3 s3 = s2 + c;
+        const glm::vec3 s4 = s3 + d;
+        const glm::vec3 s = 2.0f * (a * s4 + b * s3 + c * s2 + d);
+
+        const float ap = -s4.y * s4.z;
+        const float bp = -s4.x * s4.z;
+        const float cp = -s4.x * s4.y;
+        return v * glm::mat3(
+            s.y + s.z, bp, cp,
+            bp, s.x + s.z, ap,
+            cp, ap, s.x + s.y
+        );
+    }
+
+    glm::mat3 sphereInertiaTensor(float radius) {
+        return glm::mat3(2.0f / 5.0f * radius * radius);
+    }
+
+    glm::mat3 boxInertiaTensor(const glm::vec3& halfLengths) {
+        const glm::vec3 sqLength = 4.0f * halfLengths * halfLengths;
+        return glm::diagonal3x3(glm::vec3(sqLength.y + sqLength.z, sqLength.x + sqLength.z, sqLength.x + sqLength.y) / 12.0f);
+    }
+
+    glm::mat3 cylinderInertiaTensor(float radius, float halfHeight) {
+        const float radius2 = radius * radius;
+        const float a = (3.0f * radius2 + 4.0f * halfHeight * halfHeight) / 6.0f;
+        return glm::diagonal3x3(glm::vec3(a, radius2, a) * 0.5f);
+    }
+
+    glm::mat3 capsuleInertiaTensor(float radius, float halfHeight) {
+        const float height = 2.0f * halfHeight;
+        const float radius2 = radius * radius;
+
+        const float cylinderVolume = glm::pi<float>() * height * radius2;
+        const float hemispheresVolume = 2.0f * glm::pi<float>() * radius * radius2 / 3.0f;
+        const float cylinderPart = cylinderVolume / (cylinderVolume + 2.0f * hemispheresVolume);
+        const float hemispheresPart = 1.0f - cylinderPart;
+
+        const float a = 0.5f * radius2 * cylinderPart;
+        const float b = 0.5f * a + cylinderPart * height * height / 12.0f;
+        const float c = 2.0f * hemispheresPart * radius2 / 5.0f;
+        const float d = c + hemispheresPart * (halfHeight * halfHeight + 3.0f / 8.0f * height * radius);
+        return glm::diagonal3x3(glm::vec3(b + 2.0f * d, a + 2.0f * c, b + 2.0f * d));
+    }
+
+    glm::mat3 convexSetInertiaTensor(const std::vector<glm::vec3>& convexSet) {
+        glm::vec3 barycenter = uniformConvexSetBarycenter(convexSet);
+        glm::mat3 inertiaTensor = glm::mat3(0.0f);
+        for (const auto[a, b, c, d] : convexSetTetrahedralization(convexSet)) {
+            inertiaTensor += shiftInertia(tetrahedronInertiaTensor(a, b, c, d), barycenter);
+        }
+        return inertiaTensor;
     }
 }

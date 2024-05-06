@@ -5,6 +5,8 @@
 #include <optional>
 #include <array>
 #include <vector>
+#include <functional>
+#include <tuple>
 
 /*struct IntersectionInfo {
     glm::vec3 collisionPoint;
@@ -47,11 +49,11 @@ namespace geometry {
     struct DiscreteIntersectionInfo {
     public:
 
-        DiscreteIntersectionInfo(const std::vector<glm::vec3>& intersectionPolygon, const glm::vec3& normal, float penetration);
+        DiscreteIntersectionInfo(const glm::vec3& intersectionPoint, const glm::vec3& normal, float penetration);
 
         bool intersects() const;
 
-        std::vector<glm::vec3> getIntersectionPolygon() const;
+        glm::vec3 getIntersectionPoint() const;
 
         glm::vec3 getNormal() const;
 
@@ -66,11 +68,13 @@ namespace geometry {
         DiscreteIntersectionInfo();
 
         bool doesIntersect;
-        std::vector<glm::vec3> intersectionPolygon;
+        glm::vec3 intersectionPoint;
         glm::vec3 normal;
         float penetration;
 
     };
+
+    std::function<bool(const glm::vec3&, const glm::vec3&)> sweepSortingFunction(const glm::vec3& direction);
 
     DiscreteIntersectionInfo sat(const std::vector<glm::vec3>& points1, const std::vector<glm::vec3>& points2, const std::vector<glm::vec3>& axes);
 
@@ -78,7 +82,11 @@ namespace geometry {
 
     RaycastInfo raycastSphere(const glm::vec3& rayOrigin, const glm::vec3& rayDirection, const glm::vec3& spherePosition, float sphereRadius);
 
+    glm::vec3 arbitraryOrthogonal(const glm::vec3& direction);
+
     glm::vec3 convexSetSupportPoint(const std::vector<glm::vec3>& convexSet, const glm::vec3& direction);
+
+    std::array<glm::vec3, 3> convexSetSupportTriangle(const std::vector<glm::vec3>& convexSet, const glm::vec3& direction);
 
     std::vector<glm::vec3> convexSetSupportPlane(const std::vector<glm::vec3>& convexSet, const glm::vec3& direction);
 
@@ -88,10 +96,6 @@ namespace geometry {
 
     glm::vec3 weightedConvexSetBarycenter(const std::vector<glm::vec3>& convexSet, const std::vector<float>& pointWeights);
 
-    float tetrahedronVolume(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& d);
-
-    float convexSetVolume(const std::vector<glm::vec3>& convexSet);
-
     std::vector<glm::vec3> getBoxVertices(const glm::vec3& halfLengths);
 
     std::vector<glm::vec3> translatePoints(const std::vector<glm::vec3>& points, const glm::vec3& translation);
@@ -99,14 +103,20 @@ namespace geometry {
     std::vector<glm::vec3> transformPoints(const std::vector<glm::vec3>& points, const glm::vec3& translation, const glm::mat3& rotation);
 
     std::vector<glm::vec3> transformPoints(const std::vector<glm::vec3>& points, const glm::vec3& translation, const glm::quat& rotation);
+    
+    std::pair<glm::vec3, glm::vec3> capsuleHemispheres(const glm::vec3& position, const glm::quat& rotation, float halfHeight);
+
+    std::array<float, 3> barycentricCoordinates(const glm::vec3& point, const glm::vec3& a, const glm::vec3& b, const glm::vec3& c);
+
+    // Closest points
+
+    glm::vec3 closestPointOnLine(const glm::vec3& point, const glm::vec3& a, const glm::vec3& b, bool closed = false);
+
+    std::pair<glm::vec3, glm::vec3> closestPointsOnLines(const glm::vec3& a1, const glm::vec3& a2, const glm::vec3& b1, const glm::vec3& b2, bool closed1 = false, bool closed2 = false);
 
     glm::vec3 closestPointOnTriangle(const glm::vec3& point, const glm::vec3& a, const glm::vec3& b, const glm::vec3& c);
 
     glm::vec3 closestPointOnPlane(const glm::vec3& point, const glm::vec3& a, const glm::vec3& b, const glm::vec3& c);
-
-    std::vector<glm::vec3> intersectingConvexPolygon(const std::vector<glm::vec3>& points1, const std::vector<glm::vec3>& points2, const glm::vec3& direction);
-    
-    std::pair<glm::vec3, glm::vec3> capsuleCenters(const glm::vec3& position, const glm::quat& rotation, float halfLength);
 
     // Bounding box
 
@@ -126,7 +136,7 @@ namespace geometry {
 
     DiscreteIntersectionInfo boxSphereIntersection(const glm::vec3& position1, const glm::quat& rotation, const glm::vec3& halfLength, const glm::vec3& position2, float radius);
 
-    DiscreteIntersectionInfo boxCapsuleIntersection(const glm::vec3& position1, const glm::quat& rotation, const glm::vec3& halfLength1, const glm::vec3& position2, const glm::quat& rotation2, float halfLength2, float radius);
+    DiscreteIntersectionInfo boxCapsuleIntersection(const glm::vec3& position1, const glm::quat& rotation1, const glm::vec3& halfLength, const glm::vec3& position2, const glm::quat& rotation2, float halfHeight, float radius);
 
     DiscreteIntersectionInfo pointSphereIntersection(const glm::vec3& pointPosition, const glm::vec3& center, float radius);
 
@@ -134,5 +144,43 @@ namespace geometry {
 
     DiscreteIntersectionInfo sphereCapsuleIntersection(const glm::vec3& position1, float radius1, const glm::vec3& position2, const glm::quat& rotation, float halfLength, float radius2);
 
+    DiscreteIntersectionInfo sphereConvexIntersection(const glm::vec3& position1, float radius, const glm::vec3& position2, const glm::quat& rotation, const std::vector<glm::vec3> vertices);
+
+    DiscreteIntersectionInfo capsuleConvexIntersection(const glm::vec3& position1, const glm::quat& rotation1, float halfHeight, float radius, const glm::vec3& position2, const glm::quat& rotation2, const std::vector<glm::vec3> vertices);
+
+    DiscreteIntersectionInfo capsuleCapsuleIntersection(const glm::vec3& position1, const glm::quat& rotation1, float halfHeight1, float radius1, const glm::vec3& position2, const glm::quat& rotation2, float halfHeight2, float radius2);
+
     DiscreteIntersectionInfo convexConvexIntersection(const glm::vec3& position1, const glm::quat& rotation1, const std::vector<glm::vec3>& vertices1, const glm::vec3& position2, const glm::quat& rotation2, const std::vector<glm::vec3>& vertices2);
+
+    // Volume
+
+    float tetrahedronVolume(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& d);
+
+    float sphereVolume(float radius);
+
+    float boxVolume(const glm::vec3& halfLengths);
+
+    float cylinderVolume(float radius, float halfHeight);
+
+    float capsuleVolume(float radius, float halfHeight);
+
+    float convexSetVolume(const std::vector<glm::vec3>& convexSet);
+
+    // Inertia
+
+    glm::mat3 shiftInertiaTensor(const glm::mat3& inertiaTensor, const glm::vec3& shift);
+
+    glm::mat3 rotateInertiaTensor(const glm::mat3& inertiaTensor, const glm::quat& rotation);
+
+    glm::mat3 tetrahedronInertiaTensor(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& d);
+
+    glm::mat3 sphereInertiaTensor(float radius);
+
+    glm::mat3 boxInertiaTensor(const glm::vec3& halfLengths);
+
+    glm::mat3 cylinderInertiaTensor(float radius, float halfHeight);
+
+    glm::mat3 capsuleInertiaTensor(float radius, float halfHeight);
+
+    glm::mat3 convexSetInertiaTensor(const std::vector<glm::vec3>& convexSet);
 }
