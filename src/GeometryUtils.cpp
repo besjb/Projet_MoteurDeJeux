@@ -15,11 +15,6 @@
 extern Mesh* globalEarthMesh;
 extern Scene* scenePointer;
 
-/*IntersectionInfo& IntersectionInfo::invert() {
-    normal = -normal;
-    return *this;
-}*/
-
 namespace geometry {
 
     RaycastInfo::RaycastInfo(
@@ -397,13 +392,10 @@ namespace geometry {
             }
         } while (minDistance == std::numeric_limits<float>::max());
 
-        const auto [u, v, w] = barycentricCoordinates(glm::vec3(), simplex[faces[3 * minFace]][0], simplex[faces[3 * minFace + 1]][0], simplex[faces[3 * minFace + 2]][0]);
-        //std::cout << "u " << u << " v " << v << " w " << w << '\n';
-        //const glm::vec3 collisionPoint1 = u * simplex[faces[3 * minFace]][1] + v * simplex[faces[3 * minFace + 1]][1] + w * simplex[faces[3 * minFace + 2]][1];
-        const glm::vec3 collisionPoint2 = u * simplex[faces[3 * minFace]][2] + v * simplex[faces[3 * minFace + 1]][2] + w * simplex[faces[3 * minFace + 2]][2];
+        std::vector<glm::vec3> contactPatch = supportsIntersection(points1, points2, -minNormal);
 
         return DiscreteIntersectionInfo(
-            collisionPoint2,
+            uniformConvexSetBarycenter(contactPatch),
             //minNormal * glm::dot(simplex[faces[3 * minFace]], minNormal),
             -minNormal,
             minDistance
@@ -558,8 +550,8 @@ namespace geometry {
         std::vector<std::array<glm::vec3, 4>> tetrahedra;
         std::vector<glm::vec3> sortedConvexSet = convexSet;
         std::sort(sortedConvexSet.begin(), sortedConvexSet.end(), sweepSortingFunction(glm::vec3(1.0f, 0.0f, 0.0f)));
-        for (std::size_t i = 1; i < sortedConvexSet.size() - 2; ++i) {
-            tetrahedra.push_back({sortedConvexSet[0], sortedConvexSet[i], sortedConvexSet[i + 1], sortedConvexSet[i + 2]});
+        for (std::size_t i = 0; i < sortedConvexSet.size() - 3; ++i) {
+            tetrahedra.push_back({sortedConvexSet[i], sortedConvexSet[i + 1], sortedConvexSet[i + 2], sortedConvexSet[i + 3]});
         }
         return tetrahedra;
     }
@@ -883,6 +875,144 @@ namespace geometry {
         );
     }
 
+    static std::pair<std::vector<glm::vec3>, std::vector<glm::vec3>> halvePolygon(const std::vector<glm::vec3>& polygon, const glm::vec3& orthogonalDirection) {
+        std::vector<glm::vec3> firstHalf;
+        std::vector<glm::vec3> secondHalf;
+        firstHalf.push_back(polygon[0]);
+        secondHalf.push_back(polygon[0]);
+        
+        for (std::size_t i = 1; i < polygon.size() - 1; ++i) {
+            if (glm::dot(orthogonalDirection, polygon[i] - polygon[0]) > 0.0f) {
+                firstHalf.push_back(polygon[i]);
+            }
+            else {
+                secondHalf.push_back(polygon[i]);
+            }
+        }
+        firstHalf.push_back(polygon[polygon.size() - 1]);
+        secondHalf.push_back(polygon[polygon.size() - 1]);
+        return std::make_pair(firstHalf, secondHalf);
+    }
+
+    static std::optional<glm::vec3> edgeIntersection(const glm::vec3& a1, const glm::vec3& a2, const glm::vec3& b1, const glm::vec3& b2) {
+        const auto[a, b] = closestPointsOnLines(a1, a2, b1, b2, true, true);
+        if (glm::distance2(a, b) < glm::epsilon<float>()) {
+            return std::make_optional(0.5f * (a + b));
+        }
+        return std::nullopt;
+    }
+
+    static void addHalvesIntersection(std::vector<glm::vec3>& intersectionPoints, const std::vector<glm::vec3>& firstHalf, const std::vector<glm::vec3>& secondHalf, const glm::vec3& sweepDirection, const glm::vec3& orthogonalDirection, bool checkInsideOnly) {
+        std::size_t i = 0;
+        std::size_t j = 0;
+        while (i < firstHalf.size() - 1 || j < secondHalf.size() - 1) {
+            if (!checkInsideOnly) {
+                // TODO Pas besoin de test tout le temps
+                const auto intersection = edgeIntersection(firstHalf[i], firstHalf[i + 1], secondHalf[i], secondHalf[i + 1]);
+                if (intersection.has_value()) {
+                    intersectionPoints.push_back(intersection.value());
+                }
+            }
+
+            if (glm::dot(firstHalf[i] - firstHalf[0], sweepDirection) <= glm::dot(secondHalf[j] - firstHalf[0], sweepDirection)) {
+                const float proj1 = glm::dot(firstHalf[i] - firstHalf[0], sweepDirection);
+                const float proj2 = glm::dot(secondHalf[j] - firstHalf[0], sweepDirection);
+                const float proj3 = glm::dot(firstHalf[i + 1] - firstHalf[0], sweepDirection);
+                const glm::vec3 a = glm::mix(firstHalf[i], firstHalf[i + 1], (proj2 - proj1) / (proj3 - proj1));
+                const float oproj1 = glm::dot(secondHalf[j] - firstHalf[0], -orthogonalDirection);
+                const float oproj2 = glm::dot(a - firstHalf[0], -orthogonalDirection);
+                
+                if (oproj1 > 0.0f && oproj1 < oproj2) {
+                    intersectionPoints.push_back(secondHalf[j]);
+                }
+            }
+
+            if (j >= secondHalf.size() - 1) {
+                break;
+            }
+
+            if (i < firstHalf.size() - 1 && glm::dot(firstHalf[i] - firstHalf[0], sweepDirection) < glm::dot(secondHalf[j] - firstHalf[0], sweepDirection)) {
+                ++i;
+            }
+            else {
+                ++j;
+            }
+        }
+    }
+
+    std::vector<glm::vec3> supportsIntersection(const std::vector<glm::vec3>& points1, const std::vector<glm::vec3>& points2, const glm::vec3& supportDirection) {
+        std::vector<glm::vec3> supportPoints1 = convexSetSupportPlane(points1, -supportDirection);
+        std::vector<glm::vec3> supportPoints2 = convexSetSupportPlane(points2, supportDirection);
+
+        if (supportPoints1.size() == 1) {
+            return {supportPoints1[0]};
+        }
+        else if (supportPoints2.size() == 1) {
+            return {supportPoints2[0]};
+        }
+
+        /*float midShift = 0.5f * glm::dot(supportPoints2[0] - supportPoints1[0], supportDirection);
+
+        supportPoints1 = translatePoints(supportPoints1, midShift * supportDirection);
+        supportPoints2 = translatePoints(supportPoints2, -midShift * supportDirection);
+
+        const glm::vec3 sweepDirection = arbitraryOrthogonal(supportDirection);
+
+        const glm::vec3 sweepDirection1 = convexSetSupportPoint(points1, sweepDirection) - convexSetSupportPoint(points1, -sweepDirection);
+        const glm::vec3 sweepDirection2 = convexSetSupportPoint(points2, sweepDirection) - convexSetSupportPoint(points2, -sweepDirection);
+
+        std::sort(supportPoints1.begin(), supportPoints1.end(), sweepSortingFunction(sweepDirection1));
+        std::sort(supportPoints2.begin(), supportPoints2.end(), sweepSortingFunction(sweepDirection2));
+
+        const glm::vec3 orthogonalDirection1 = glm::cross(supportDirection, sweepDirection1);
+        const glm::vec3 orthogonalDirection2 = glm::cross(supportDirection, sweepDirection2);
+
+        for (auto& z : supportPoints1)
+            std::cout << glm::to_string(z) << ' ';
+        std::cout << '\n';
+
+        for (auto& z : supportPoints2)
+            std::cout << glm::to_string(z) << ' ';
+        std::cout << '\n';
+        std::cout << "...\n";
+
+        const auto [firstHalf1, secondHalf1] = halvePolygon(supportPoints1, orthogonalDirection1);
+        const auto [firstHalf2, secondHalf2] = halvePolygon(supportPoints2, orthogonalDirection2);
+
+        for (auto& z : firstHalf1)
+            std::cout << glm::to_string(z) << ' ';
+        std::cout << '\n';
+
+        for (auto& z : firstHalf2)
+            std::cout << glm::to_string(z) << ' ';
+        std::cout << '\n';
+        std::cout << "...\n";
+
+        std::vector<glm::vec3> intersectionPoints;
+
+        // TODO C'est possible d'utiliser 2x moins de fonctions
+        addHalvesIntersection(intersectionPoints, firstHalf1, firstHalf2, sweepDirection1, orthogonalDirection1, false);
+        addHalvesIntersection(intersectionPoints, firstHalf1, secondHalf2, sweepDirection1, orthogonalDirection1, false);
+        addHalvesIntersection(intersectionPoints, secondHalf1, firstHalf2, sweepDirection1, -orthogonalDirection1, false);
+        addHalvesIntersection(intersectionPoints, secondHalf1, secondHalf2, sweepDirection1, -orthogonalDirection1, false);
+        addHalvesIntersection(intersectionPoints, firstHalf2, firstHalf1, sweepDirection2, orthogonalDirection2, true);
+        addHalvesIntersection(intersectionPoints, firstHalf2, secondHalf1, sweepDirection2, orthogonalDirection2, true);
+        addHalvesIntersection(intersectionPoints, secondHalf2, firstHalf1, sweepDirection2, -orthogonalDirection2, true);
+        addHalvesIntersection(intersectionPoints, secondHalf2, secondHalf1, sweepDirection2, -orthogonalDirection2, true);
+
+        for (auto& z : intersectionPoints) {
+            scenePointer->getRootTransformTree()->addChild({z, glm::identity<glm::quat>(), glm::vec3(0.04f)})->addObject(globalEarthMesh);
+         
+            std::cout << glm::to_string(z) << ' ';
+        }
+        std::cout << '\n';
+        std::cout << '\n';
+
+        return intersectionPoints;*/
+
+        return {supportPoints2[0]};
+    }
+
     // Volume
 
     float tetrahedronVolume(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& d) {
@@ -915,7 +1045,7 @@ namespace geometry {
 
     // Inertia
 
-    glm::mat3 shiftInertia(const glm::mat3& inertiaTensor, const glm::vec3& shift) {
+    glm::mat3 shiftInertiaTensor(const glm::mat3& inertiaTensor, const glm::vec3& shift) {
         const glm::vec3 sq{shift * shift};
         const float xy{-shift.x * shift.y};
         const float xz{-shift.x * shift.z};
@@ -954,8 +1084,8 @@ namespace geometry {
     }
 
     glm::mat3 boxInertiaTensor(const glm::vec3& halfLengths) {
-        const glm::vec3 sqLength = 4.0f * halfLengths * halfLengths;
-        return glm::diagonal3x3(glm::vec3(sqLength.y + sqLength.z, sqLength.x + sqLength.z, sqLength.x + sqLength.y) / 12.0f);
+        const glm::vec3 sqLength = halfLengths * halfLengths;
+        return glm::diagonal3x3(glm::vec3(sqLength.y + sqLength.z, sqLength.x + sqLength.z, sqLength.x + sqLength.y) / 3.0f);
     }
 
     glm::mat3 cylinderInertiaTensor(float radius, float halfHeight) {
@@ -984,7 +1114,7 @@ namespace geometry {
         glm::vec3 barycenter = uniformConvexSetBarycenter(convexSet);
         glm::mat3 inertiaTensor = glm::mat3(0.0f);
         for (const auto[a, b, c, d] : convexSetTetrahedralization(convexSet)) {
-            inertiaTensor += shiftInertia(tetrahedronInertiaTensor(a, b, c, d), barycenter);
+            inertiaTensor += shiftInertiaTensor(tetrahedronInertiaTensor(a, b, c, d), barycenter);
         }
         return inertiaTensor;
     }

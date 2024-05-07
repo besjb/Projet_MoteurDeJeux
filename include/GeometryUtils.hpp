@@ -152,6 +152,10 @@ namespace geometry {
 
     DiscreteIntersectionInfo convexConvexIntersection(const glm::vec3& position1, const glm::quat& rotation1, const std::vector<glm::vec3>& vertices1, const glm::vec3& position2, const glm::quat& rotation2, const std::vector<glm::vec3>& vertices2);
 
+    glm::vec3 projectedLinesIntersection(const glm::vec3& a1, const glm::vec3& a2, const glm::vec3& b1, const glm::vec3& b2);
+
+    std::vector<glm::vec3> supportsIntersection(const std::vector<glm::vec3>& points1, const std::vector<glm::vec3>& points2, const glm::vec3& supportDirection);
+
     // Volume
 
     float tetrahedronVolume(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& d);

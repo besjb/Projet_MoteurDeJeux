@@ -50,7 +50,9 @@ public:
 
     virtual ColliderType getColliderType() const = 0;
 
-    virtual glm::mat3 getInertiaTensor(float mass) const = 0;
+    virtual glm::mat3 getInertiaTensor() const = 0;
+
+    virtual float getVolume() const = 0;
 
     geometry::DiscreteIntersectionInfo getCollisionInfo(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const Collider* collider, bool continuous);
 
@@ -74,7 +76,9 @@ public:
 
     ColliderType getColliderType() const override {return ColliderType::OBB;}
 
-    glm::mat3 getInertiaTensor(float mass) const override;
+    glm::mat3 getInertiaTensor() const override;
+
+    float getVolume() const override;
 
     geometry::DiscreteIntersectionInfo getCollisionInfoOBB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const OBBCollider* collider, bool continuous) const override;
     geometry::DiscreteIntersectionInfo getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const override;
@@ -93,7 +97,9 @@ public:
 
     ColliderType getColliderType() const override {return ColliderType::SPHERE;}
 
-    glm::mat3 getInertiaTensor(float mass) const override;
+    glm::mat3 getInertiaTensor() const override;
+
+    float getVolume() const override;
 
     geometry::DiscreteIntersectionInfo getCollisionInfoOBB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const OBBCollider* collider, bool continuous) const override;
     geometry::DiscreteIntersectionInfo getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const override;
@@ -114,7 +120,9 @@ public:
 
     ColliderType getColliderType() const override {return ColliderType::CAPSULE;}
 
-    glm::mat3 getInertiaTensor(float mass) const override;
+    glm::mat3 getInertiaTensor() const override;
+
+    float getVolume() const override;
 
     geometry::DiscreteIntersectionInfo getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const override;
 
@@ -131,7 +139,9 @@ public:
 
     ColliderType getColliderType() const override {return ColliderType::CONVEX;}
 
-    glm::mat3 getInertiaTensor(float mass) const override;
+    glm::mat3 getInertiaTensor() const override;
+
+    float getVolume() const override;
 
     geometry::DiscreteIntersectionInfo getCollisionInfoOBB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const OBBCollider* collider, bool continuous) const override;
     geometry::DiscreteIntersectionInfo getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const override;
@@ -239,6 +249,7 @@ public:
     glm::quat getRotation() const {return rotation;}
     glm::vec3 getAngularVelocity() const {return canRotate() ? angularVelocity : glm::vec3(0.0f, 0.0f, 0.0f);}
     float getMass() const {return isStatic() ? std::numeric_limits<float>::infinity() : mass;}
+    float getDensity() const {return getMass() / collider->getVolume();}
     Collider* getCollider() const {return collider;}
     PhysicsMaterial getPhysicsMaterial() const {return material;}
 
@@ -250,6 +261,7 @@ public:
     RigidBody& setRotation(const glm::quat& rotation) {this->rotation = rotation; return *this;}
     RigidBody& setAngularVelocity(const glm::vec3& angularVelocity) {this->angularVelocity = angularVelocity; return *this;}
     RigidBody& setMass(float mass) {this->mass = mass; return *this;}
+    RigidBody& setDensity(float density) {mass = density * collider->getVolume(); return *this;}
     RigidBody& setMaterial(const PhysicsMaterial material) {this->material = material; return *this;}
 
     RigidBody& applyImpulse(const glm::vec3& impulsePosition, const glm::mat3& inverseInertia, const glm::vec3& impulse);
