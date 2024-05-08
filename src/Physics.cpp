@@ -44,9 +44,6 @@ void PhysicsEngine::tick(float delta) {
                 
                 const glm::vec3 collisionPoint = intersectionInfo.getIntersectionPoint() + intersectionInfo.getNormal() * intersectionInfo.getPenetration() * (massRatio - 0.5f);
 
-                //std::cout << glm::to_string(collisionPoint) << '\n';
-                //scenePointer->getRootTransformTree()->addChild({collisionPoint, glm::identity<glm::quat>(), glm::vec3(0.04f)})->addObject(globalEarthMesh);
-
                 const glm::vec3 velocity1 = body1->getVelocity() + glm::cross(body1->getAngularVelocity(), collisionPoint - body1->getPosition());
                 const glm::vec3 velocity2 = body2->getVelocity() + glm::cross(body2->getAngularVelocity(), collisionPoint - body2->getPosition());
 

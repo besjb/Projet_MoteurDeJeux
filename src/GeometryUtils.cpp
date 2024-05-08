@@ -492,7 +492,7 @@ namespace geometry {
     }
 
     glm::vec3 arbitraryOrthogonal(const glm::vec3& direction) {
-        return glm::cross(direction, direction.x == 0.0f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f));
+        return glm::cross(direction, direction.x == 0.0f ? glm::vec3(1.0f, 0.0f, 0.5f) : glm::vec3(0.0f, 1.0f, 0.5f));
     }
 
     glm::vec3 convexSetSupportPoint(const std::vector<glm::vec3>& convexSet, const glm::vec3& direction) {
@@ -894,47 +894,73 @@ namespace geometry {
         return std::make_pair(firstHalf, secondHalf);
     }
 
-    static std::optional<glm::vec3> edgeIntersection(const glm::vec3& a1, const glm::vec3& a2, const glm::vec3& b1, const glm::vec3& b2) {
-        const auto[a, b] = closestPointsOnLines(a1, a2, b1, b2, true, true);
-        if (glm::distance2(a, b) < glm::epsilon<float>()) {
-            return std::make_optional(0.5f * (a + b));
-        }
-        return std::nullopt;
-    }
-
-    static void addHalvesIntersection(std::vector<glm::vec3>& intersectionPoints, const std::vector<glm::vec3>& firstHalf, const std::vector<glm::vec3>& secondHalf, const glm::vec3& sweepDirection, const glm::vec3& orthogonalDirection, bool checkInsideOnly) {
+    static void addInnerPoints(std::vector<glm::vec3>& intersectionPoints, const std::vector<glm::vec3>& half, const std::vector<glm::vec3>& points, const glm::vec3& sweepDirection, const glm::vec3& orthogonalDirection) {
         std::size_t i = 0;
         std::size_t j = 0;
-        while (i < firstHalf.size() - 1 || j < secondHalf.size() - 1) {
-            if (!checkInsideOnly) {
-                // TODO Pas besoin de test tout le temps
-                const auto intersection = edgeIntersection(firstHalf[i], firstHalf[i + 1], secondHalf[i], secondHalf[i + 1]);
-                if (intersection.has_value()) {
-                    intersectionPoints.push_back(intersection.value());
-                }
-            }
+        float a = glm::dot(half[0], sweepDirection);
 
-            if (glm::dot(firstHalf[i] - firstHalf[0], sweepDirection) <= glm::dot(secondHalf[j] - firstHalf[0], sweepDirection)) {
-                const float proj1 = glm::dot(firstHalf[i] - firstHalf[0], sweepDirection);
-                const float proj2 = glm::dot(secondHalf[j] - firstHalf[0], sweepDirection);
-                const float proj3 = glm::dot(firstHalf[i + 1] - firstHalf[0], sweepDirection);
-                const glm::vec3 a = glm::mix(firstHalf[i], firstHalf[i + 1], (proj2 - proj1) / (proj3 - proj1));
-                const float oproj1 = glm::dot(secondHalf[j] - firstHalf[0], -orthogonalDirection);
-                const float oproj2 = glm::dot(a - firstHalf[0], -orthogonalDirection);
+        while (j < points.size()) {
+            const float b = glm::dot(half[i + 1], sweepDirection);
+            const float u = glm::dot(points[j], sweepDirection);
+
+            if (a <= u && u < b) {
+                const glm::vec3 v = glm::mix(half[i], half[i + 1], (u - a) / (b - a));
+
+                const float up = glm::dot(points[j], orthogonalDirection);
+                const float vp = glm::dot(v, orthogonalDirection);
                 
-                if (oproj1 > 0.0f && oproj1 < oproj2) {
-                    intersectionPoints.push_back(secondHalf[j]);
+                if (up >= 0.0f && up < vp) {
+                    intersectionPoints.push_back(points[j]);
                 }
             }
 
-            if (j >= secondHalf.size() - 1) {
-                break;
-            }
-
-            if (i < firstHalf.size() - 1 && glm::dot(firstHalf[i] - firstHalf[0], sweepDirection) < glm::dot(secondHalf[j] - firstHalf[0], sweepDirection)) {
+            if (i < half.size() - 1 && b < u) {
+                a = b;
                 ++i;
             }
             else {
+                ++j;
+            }
+        }
+    }
+
+    static void addIntersections(std::vector<glm::vec3>& intersectionPoints, const std::vector<glm::vec3>& firstHalf, const std::vector<glm::vec3>& secondHalf, const glm::vec3& sweepDirection, const glm::vec3& orthogonalDirection) {
+        std::size_t i = 0;
+        std::size_t j = 0;
+
+        float aix = glm::dot(firstHalf[0], sweepDirection);
+        float ajx = glm::dot(secondHalf[0], sweepDirection);
+
+        while (i < firstHalf.size() - 1 && j < secondHalf.size() - 1) {
+            const float bix = glm::dot(firstHalf[i + 1], sweepDirection);
+            const float bjx = glm::dot(secondHalf[j + 1], sweepDirection);
+
+            const float s = std::max(aix, ajx);
+            const float e = std::min(bix, bjx);
+
+            if (s <= e) {
+                const float aiy = glm::dot(firstHalf[i], orthogonalDirection);
+                const float biy = glm::dot(firstHalf[i + 1], orthogonalDirection);
+                const float ajy = glm::dot(secondHalf[j], orthogonalDirection);
+                const float bjy = glm::dot(secondHalf[j + 1], orthogonalDirection);
+
+                const float ix = aix - bix;
+                const float jx = ajx - bjx;
+                const float d = jx * (aix * biy - aiy * bix) - ix * (ajx * bjy - ajy * bjx);
+                const float x = d / (ix * (ajy - bjy) - jx * (aiy - biy));                
+                if (s <= x && x < e) {
+                    const float xr = (x - aix) / (bix - aix);
+                    const glm::vec3 v = glm::mix(firstHalf[i], firstHalf[i + 1], xr);
+                    intersectionPoints.push_back(v);
+                }
+            }
+
+            if (i < firstHalf.size() - 1 && aix < ajx) {
+                aix = bix;
+                ++i;
+            }
+            else {
+                ajx = bjx;
                 ++j;
             }
         }
@@ -951,66 +977,45 @@ namespace geometry {
             return {supportPoints2[0]};
         }
 
-        /*float midShift = 0.5f * glm::dot(supportPoints2[0] - supportPoints1[0], supportDirection);
+        float midShift = 0.5f * glm::dot(supportPoints2[0] - supportPoints1[0], supportDirection);
 
         supportPoints1 = translatePoints(supportPoints1, midShift * supportDirection);
         supportPoints2 = translatePoints(supportPoints2, -midShift * supportDirection);
 
-        const glm::vec3 sweepDirection = arbitraryOrthogonal(supportDirection);
+        glm::vec3 sweepDirection = arbitraryOrthogonal(supportDirection);
+        sweepDirection = convexSetSupportPoint(points1, sweepDirection) - convexSetSupportPoint(points1, -sweepDirection);
 
-        const glm::vec3 sweepDirection1 = convexSetSupportPoint(points1, sweepDirection) - convexSetSupportPoint(points1, -sweepDirection);
-        const glm::vec3 sweepDirection2 = convexSetSupportPoint(points2, sweepDirection) - convexSetSupportPoint(points2, -sweepDirection);
+        std::sort(supportPoints1.begin(), supportPoints1.end(), sweepSortingFunction(sweepDirection));
+        std::sort(supportPoints2.begin(), supportPoints2.end(), sweepSortingFunction(sweepDirection));
 
-        std::sort(supportPoints1.begin(), supportPoints1.end(), sweepSortingFunction(sweepDirection1));
-        std::sort(supportPoints2.begin(), supportPoints2.end(), sweepSortingFunction(sweepDirection2));
+        const glm::vec3 origin = supportPoints1[0];
 
-        const glm::vec3 orthogonalDirection1 = glm::cross(supportDirection, sweepDirection1);
-        const glm::vec3 orthogonalDirection2 = glm::cross(supportDirection, sweepDirection2);
+        supportPoints1 = translatePoints(supportPoints1, -origin);
+        supportPoints2 = translatePoints(supportPoints2, -origin);
 
-        for (auto& z : supportPoints1)
-            std::cout << glm::to_string(z) << ' ';
-        std::cout << '\n';
+        const glm::vec3 orthogonalDirection = glm::cross(supportDirection, sweepDirection);
 
-        for (auto& z : supportPoints2)
-            std::cout << glm::to_string(z) << ' ';
-        std::cout << '\n';
-        std::cout << "...\n";
-
-        const auto [firstHalf1, secondHalf1] = halvePolygon(supportPoints1, orthogonalDirection1);
-        const auto [firstHalf2, secondHalf2] = halvePolygon(supportPoints2, orthogonalDirection2);
-
-        for (auto& z : firstHalf1)
-            std::cout << glm::to_string(z) << ' ';
-        std::cout << '\n';
-
-        for (auto& z : firstHalf2)
-            std::cout << glm::to_string(z) << ' ';
-        std::cout << '\n';
-        std::cout << "...\n";
+        const auto [firstHalf1, secondHalf1] = halvePolygon(supportPoints1, orthogonalDirection);
+        const auto [firstHalf2, secondHalf2] = halvePolygon(supportPoints2, orthogonalDirection);
 
         std::vector<glm::vec3> intersectionPoints;
 
-        // TODO C'est possible d'utiliser 2x moins de fonctions
-        addHalvesIntersection(intersectionPoints, firstHalf1, firstHalf2, sweepDirection1, orthogonalDirection1, false);
-        addHalvesIntersection(intersectionPoints, firstHalf1, secondHalf2, sweepDirection1, orthogonalDirection1, false);
-        addHalvesIntersection(intersectionPoints, secondHalf1, firstHalf2, sweepDirection1, -orthogonalDirection1, false);
-        addHalvesIntersection(intersectionPoints, secondHalf1, secondHalf2, sweepDirection1, -orthogonalDirection1, false);
-        addHalvesIntersection(intersectionPoints, firstHalf2, firstHalf1, sweepDirection2, orthogonalDirection2, true);
-        addHalvesIntersection(intersectionPoints, firstHalf2, secondHalf1, sweepDirection2, orthogonalDirection2, true);
-        addHalvesIntersection(intersectionPoints, secondHalf2, firstHalf1, sweepDirection2, -orthogonalDirection2, true);
-        addHalvesIntersection(intersectionPoints, secondHalf2, secondHalf1, sweepDirection2, -orthogonalDirection2, true);
+        // TODO C'est peut être possible de réduire le nombre d'appels
+        addInnerPoints(intersectionPoints, firstHalf1, supportPoints2, sweepDirection, orthogonalDirection);
+        addInnerPoints(intersectionPoints, secondHalf1, supportPoints2, sweepDirection, -orthogonalDirection);
+        addInnerPoints(intersectionPoints, firstHalf2, supportPoints1, sweepDirection, orthogonalDirection);
+        addInnerPoints(intersectionPoints, secondHalf2, supportPoints1, sweepDirection, -orthogonalDirection);
+        addIntersections(intersectionPoints, firstHalf1, firstHalf2, sweepDirection, orthogonalDirection);
+        addIntersections(intersectionPoints, firstHalf1, secondHalf2, sweepDirection, orthogonalDirection);
+        addIntersections(intersectionPoints, secondHalf1, firstHalf2, sweepDirection, -orthogonalDirection);
+        addIntersections(intersectionPoints, secondHalf1, secondHalf2, sweepDirection, -orthogonalDirection);
 
-        for (auto& z : intersectionPoints) {
-            scenePointer->getRootTransformTree()->addChild({z, glm::identity<glm::quat>(), glm::vec3(0.04f)})->addObject(globalEarthMesh);
-         
-            std::cout << glm::to_string(z) << ' ';
+        // Failsafe : should not happen
+        if (intersectionPoints.size() == 0) {
+            return {supportPoints1[0] + origin};
         }
-        std::cout << '\n';
-        std::cout << '\n';
 
-        return intersectionPoints;*/
-
-        return {supportPoints2[0]};
+        return translatePoints(intersectionPoints, origin);
     }
 
     // Volume
