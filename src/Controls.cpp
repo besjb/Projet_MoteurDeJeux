@@ -112,6 +112,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         }
     }
     else if (action == GLFW_RELEASE) {
+        glm::vec3 originalFrontVector;
+        glm::vec3 rotatedFrontVector; 
+        glm::vec3 rotationAxis(0.0f, 1.0f, 0.0f);       
+        glm::quat rotationQuaternion; 
+        float angleRadians;  
+
         switch (key) {
             case GLFW_KEY_W:
                 moveForwardCamera();
@@ -138,10 +144,18 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 globalRocketLeague->getCar().setForwardAcceleration(globalRocketLeague->getCar().getForwardAcceleration() + 8.0f);
                 return;
             case GLFW_KEY_LEFT:
-                mouv = glm::vec3(0.,0.,0.);
+                originalFrontVector = globalRocketLeague->getCar().getFront();
+                angleRadians = glm::radians(-2.0f);
+                rotationQuaternion = glm::angleAxis(angleRadians, rotationAxis);
+                rotatedFrontVector = glm::rotate(rotationQuaternion, originalFrontVector);
+                globalRocketLeague->getCar().setFront(rotatedFrontVector);
                 return;
             case GLFW_KEY_RIGHT:
-                mouv = glm::vec3(0.,0.,0.);
+                originalFrontVector = globalRocketLeague->getCar().getFront();
+                angleRadians = glm::radians(2.0f);
+                rotationQuaternion = glm::angleAxis(angleRadians, rotationAxis);
+                rotatedFrontVector = glm::rotate(rotationQuaternion, originalFrontVector);
+                globalRocketLeague->getCar().setFront(rotatedFrontVector);
                 return;
             default:
                 return;
