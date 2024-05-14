@@ -40,46 +40,26 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
                 return;
             case GLFW_KEY_W:
-                if (car.wheelsCollide()) {
-                    car.setForwardAcceleration(car.getForwardAcceleration() + 8.0f);
-                }
-                else {
-                    car.setMovementAngle(car.getMovementAngle() - glm::vec3(0.0f, 0.0f, 3.0f));
-                }
+                car.setForwardAcceleration(car.getForwardAcceleration() + 8.0f);
+                //car.setMovementAngle(car.getMovementAngle() - glm::vec3(0.0f, 0.0f, 3.0f));
                 return;
             case GLFW_KEY_S:
-                if (car.wheelsCollide()) {
-                    car.setForwardAcceleration(car.getForwardAcceleration() - 8.0f);
-                }
-                else {
-                    car.setMovementAngle(car.getMovementAngle() + glm::vec3(0.0f, 0.0f, 3.0f));
-                }
+                car.setForwardAcceleration(car.getForwardAcceleration() - 8.0f);
+                //car.setMovementAngle(car.getMovementAngle() + glm::vec3(0.0f, 0.0f, 3.0f));
                 return;
             case GLFW_KEY_A:
-                if (car.wheelsCollide()) {
-                    car.setTurnSensitivity(car.getTurnSensitivity() + 2.0f);
-                }
-                else {
-                    car.setMovementAngle(car.getMovementAngle() + glm::vec3(0.0f, 3.0f, 0.0f));
-                }
+                car.setTurnSensitivity(car.getTurnSensitivity() + 1.0f);
+                //car.setMovementAngle(car.getMovementAngle() + glm::vec3(0.0f, 3.0f, 0.0f));
                 return;
             case GLFW_KEY_D:
-                if (car.wheelsCollide()) {
-                    car.setTurnSensitivity(car.getTurnSensitivity() - 2.0f);
-                }
-                else {
-                    car.setMovementAngle(car.getMovementAngle() - glm::vec3(0.0f, 3.0f, 0.0f));
-                }
+                car.setTurnSensitivity(car.getTurnSensitivity() - 1.0f);
+                //car.setMovementAngle(car.getMovementAngle() - glm::vec3(0.0f, 3.0f, 0.0f));
                 return;
             case GLFW_KEY_E:
-                if (!car.wheelsCollide()) {
-                    car.setMovementAngle(car.getMovementAngle() + glm::vec3(3.0f, 0.0f, 0.0f));
-                }
+                //car.setMovementAngle(car.getMovementAngle() + glm::vec3(3.0f, 0.0f, 0.0f));
                 return;
             case GLFW_KEY_Q:
-                if (!car.wheelsCollide()) {
-                    car.setMovementAngle(car.getMovementAngle() - glm::vec3(3.0f, 0.0f, 0.0f));
-                }
+                //car.setMovementAngle(car.getMovementAngle() - glm::vec3(3.0f, 0.0f, 0.0f));
                 return;
             case GLFW_KEY_UP:
                 moveBackwardCamera();
@@ -111,46 +91,26 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     else if (action == GLFW_RELEASE) {
         switch (key) {
             case GLFW_KEY_W:
-                if (car.wheelsCollide()) {
-                    car.setForwardAcceleration(car.getForwardAcceleration() - 8.0f);
-                }
-                else {
-                    car.setMovementAngle(car.getMovementAngle() + glm::vec3(0.0f, 0.0f, 3.0f));
-                }
+                car.setForwardAcceleration(car.getForwardAcceleration() - 8.0f);
+                //car.setMovementAngle(car.getMovementAngle() + glm::vec3(0.0f, 0.0f, 3.0f));
                 return;
             case GLFW_KEY_S:
-                if (car.wheelsCollide()) {
-                    car.setForwardAcceleration(car.getForwardAcceleration() + 8.0f);
-                }
-                else {
-                    car.setMovementAngle(car.getMovementAngle() - glm::vec3(0.0f, 0.0f, 3.0f));
-                }
+                car.setForwardAcceleration(car.getForwardAcceleration() + 8.0f);
+                //car.setMovementAngle(car.getMovementAngle() - glm::vec3(0.0f, 0.0f, 3.0f));
                 return;
             case GLFW_KEY_A:
-                if (car.wheelsCollide()) {
-                    car.setTurnSensitivity(car.getTurnSensitivity() - 2.0f);
-                }
-                else {
-                    car.setMovementAngle(car.getMovementAngle() - glm::vec3(0.0f, 3.0f, 0.0f));
-                }
+                car.setTurnSensitivity(car.getTurnSensitivity() - 1.0f);
+                //car.setMovementAngle(car.getMovementAngle() - glm::vec3(0.0f, 3.0f, 0.0f));
                 return;
             case GLFW_KEY_D:
-                if (car.wheelsCollide()) {
-                    car.setTurnSensitivity(car.getTurnSensitivity() + 2.0f);
-                }
-                else {
-                    car.setMovementAngle(car.getMovementAngle() + glm::vec3(0.0f, 3.0f, 0.0f));
-                }
+                car.setTurnSensitivity(car.getTurnSensitivity() + 1.0f);
+                //car.setMovementAngle(car.getMovementAngle() + glm::vec3(0.0f, 3.0f, 0.0f));
                 return;
             case GLFW_KEY_E:
-                if (!car.wheelsCollide()) {
-                    car.setMovementAngle(car.getMovementAngle() - glm::vec3(3.0f, 0.0f, 0.0f));
-                }
+                //car.setMovementAngle(car.getMovementAngle() - glm::vec3(3.0f, 0.0f, 0.0f));
                 return;
             case GLFW_KEY_Q:
-                if (!car.wheelsCollide()) {
-                    car.setMovementAngle(car.getMovementAngle() + glm::vec3(3.0f, 0.0f, 0.0f));
-                }
+                //car.setMovementAngle(car.getMovementAngle() + glm::vec3(3.0f, 0.0f, 0.0f));
                 return;
             case GLFW_KEY_UP:
                 moveForwardCamera();
