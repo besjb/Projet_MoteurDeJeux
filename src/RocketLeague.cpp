@@ -18,6 +18,7 @@ glm::vec3 RocketLeague::getGravity() const {
 }
 
 void RocketLeague::update(float delta) {
+    car.updateAnimations(delta);
     updatePhysics(delta);
 }
 
@@ -44,7 +45,7 @@ void RocketLeague::updatePhysics(float delta) {
     car.updatePhysics(delta);
     for (Ball& ball : balls) {
         ball.updatePhysics(delta);
-    }   
+    }
 }
 
 void RocketLeague::initModels() {

@@ -94,6 +94,7 @@ int main(int argc, char** argv) {
     int windowHeight = mode->height;
 
     glfwSetKeyCallback(window, keyCallback);
+    glfwSetMouseButtonCallback(window, mouseCallback);
 
     glfwSetCursorPosCallback(window, cursorCallback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);

@@ -45,6 +45,23 @@ public:
 
     glm::vec3 getAngularVelocity() const;
 
+    glm::vec3 getUpVector() const;
+
+    bool wheelsCollide() const;
+
+    
+
+    void startJump();
+
+    void stopJump();
+
+    bool isJumping() const;
+
+    bool canDoubleJump() const;
+
+    void doubleJump();
+    
+
     glm::vec3 getFront() const;
     
     float getForwardVelocity() const;
@@ -54,6 +71,8 @@ public:
     float getForwardDeceleration() const;
 
     float getTurnSensitivity() const;
+
+    void updateAnimations(float delta);
 
     void updatePhysics(float delta);
 
@@ -72,5 +91,10 @@ private:
     float forwardAcceleration;
     float forwardDeceleration;
     float turnSensitivity;
+
+    bool doWheelsCollide;
+
+    float jumpTime;
+    float doubleJumpTime;
 
 };
