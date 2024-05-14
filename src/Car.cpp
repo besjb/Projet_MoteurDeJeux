@@ -1,6 +1,9 @@
 #include "Car.hpp"
 #include "RocketLeague.hpp"
 #include "MeshMaterial.hpp"
+#include "RocketLeaguePhysics.hpp"
+
+#include <glm/gtx/string_cast.hpp>
 
 extern RocketLeague* globalRocketLeague;
 
@@ -103,13 +106,32 @@ float Car::getTurnSensitivity() const {
 }
 
 void Car::updatePhysics(float delta) {
-    position += velocity * delta;
     rotation = glm::quat{delta * angularVelocity} * rotation;
     velocity += globalRocketLeague->getGravity() * delta;
+    glm::vec3 nextPosition{position + velocity * delta};
+
+    bool intersects{true};
+    std::size_t i{};
+    while (intersects && position != nextPosition && i < 10) {
+        std::optional<Intersection> intersectionOpt{collideCarArena(position, nextPosition, rotation)};
+        intersects = intersectionOpt.has_value();
+        if (intersects) {
+            Intersection intersection{intersectionOpt.value()};
+            position += velocity * intersection.t * delta;
+            const float normalVelocity = glm::dot(velocity, intersection.normal);
+            const float jn = -(1.0f + 0.0f) * normalVelocity;
+            velocity += jn * intersection.normal;
+            delta *= (1.0f - intersection.t);
+            nextPosition = position + velocity * delta;
+            ++i;
+        }
+    }
+    position = nextPosition;
 
     transformTree->transform
         .setTranslation(position)
         .setRotation(rotation);
+
 
     
 }

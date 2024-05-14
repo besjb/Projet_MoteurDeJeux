@@ -107,7 +107,10 @@ void RocketLeague::init(float screenRatio) {
     car.getTransformTree()
         ->addObject(carModel);
 
-    car.setMass(10.0f);
+    car
+        .setMass(10.0f)
+        .setPosition({0.0f, 5.0f, 0.0f});
+
     addBall();
 }
 
