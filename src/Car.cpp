@@ -160,7 +160,7 @@ void Car::updateAnimations(float delta) {
 
 void Car::updatePhysics(float delta) {
     rotation = glm::quat{delta * angularVelocity} * rotation;
-    rotation *= front;
+    rotation = rotation * front;
     velocity += globalRocketLeague->getGravity() * delta;
     velocity += rotation * glm::vec3(forwardAcceleration, 0.0f, 0.0f) * delta;
 
