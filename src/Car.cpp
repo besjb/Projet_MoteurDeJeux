@@ -108,6 +108,10 @@ float Car::getTurnSensitivity() const {
 void Car::updatePhysics(float delta) {
     rotation = glm::quat{delta * angularVelocity} * rotation;
     velocity += globalRocketLeague->getGravity() * delta;
+    velocity += rotation * glm::vec3(forwardAcceleration, 0.0f, 0.0f) * delta;
+    if (glm::length(velocity) > 25.0f) {
+        velocity *= 25.0f / glm::length(velocity);
+    }
     glm::vec3 nextPosition{position + velocity * delta};
 
     bool intersects{true};

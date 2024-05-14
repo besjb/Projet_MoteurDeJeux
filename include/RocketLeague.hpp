@@ -26,6 +26,8 @@ public:
 
     Scene& getScene();
 
+    Car& getCar();
+
 private:
 
     ShaderProgram meshShaderProgram;

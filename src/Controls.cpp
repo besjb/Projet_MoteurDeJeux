@@ -42,10 +42,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 moveDownCamera();
                 return;
             case GLFW_KEY_UP:
-                moveForwardCar(tree);
+                globalRocketLeague->getCar().setForwardAcceleration(globalRocketLeague->getCar().getForwardAcceleration() + 8.0f);
                 return;
             case GLFW_KEY_DOWN:
-                moveBackwardCar(tree);
+                globalRocketLeague->getCar().setForwardAcceleration(globalRocketLeague->getCar().getForwardAcceleration() - 8.0f);
                 return;
             case GLFW_KEY_LEFT:
                 moveLeftCar(tree);
@@ -115,10 +115,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 moveUpCamera();
                 return;
             case GLFW_KEY_UP:
-                mouv = glm::vec3(0.,0.,0.);
+                globalRocketLeague->getCar().setForwardAcceleration(globalRocketLeague->getCar().getForwardAcceleration() - 8.0f);
                 return;
             case GLFW_KEY_DOWN:
-                mouv = glm::vec3(0.,0.,0.);
+                globalRocketLeague->getCar().setForwardAcceleration(globalRocketLeague->getCar().getForwardAcceleration() + 8.0f);
                 return;
             case GLFW_KEY_LEFT:
                 mouv = glm::vec3(0.,0.,0.);

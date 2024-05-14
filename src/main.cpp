@@ -108,6 +108,7 @@ int main(int argc, char** argv) {
     glCullFace(GL_BACK);
 
     RocketLeague rocketLeague(static_cast<float>(windowWidth) / windowHeight);
+    globalRocketLeague = &rocketLeague;
 
     glfwSetWindowUserPointer(window, &rocketLeague.getScene());
 

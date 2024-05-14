@@ -36,6 +36,10 @@ Scene& RocketLeague::getScene() {
     return scene;
 }
 
+Car& RocketLeague::getCar() {
+    return car;
+}
+
 void RocketLeague::updatePhysics(float delta) {
     car.updatePhysics(delta);
     for (Ball& ball : balls) {
