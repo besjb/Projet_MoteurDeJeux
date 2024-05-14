@@ -33,66 +33,66 @@ void mouseCallback(GLFWwindow* window, int button, int action, int mods) {
 }
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    Scene* scene{static_cast<Scene*>(glfwGetWindowUserPointer(window))};
-    static TransformTree* tree;
+    Car& car = globalRocketLeague->getCar();
     if (action == GLFW_PRESS) {
         switch (key) {
             case GLFW_KEY_ESCAPE:
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
                 return;
             case GLFW_KEY_W:
-                moveBackwardCamera();
+                if (car.wheelsCollide()) {
+                    car.setForwardAcceleration(car.getForwardAcceleration() + 8.0f);
+                }
+                else {
+                    car.setMovementAngle(car.getMovementAngle() - glm::vec3(0.0f, 0.0f, 3.0f));
+                }
                 return;
             case GLFW_KEY_S:
-                moveForwardCamera();
+                if (car.wheelsCollide()) {
+                    car.setForwardAcceleration(car.getForwardAcceleration() - 8.0f);
+                }
+                else {
+                    car.setMovementAngle(car.getMovementAngle() + glm::vec3(0.0f, 0.0f, 3.0f));
+                }
                 return;
             case GLFW_KEY_A:
-                moveRightCamera();
+                if (car.wheelsCollide()) {
+                    car.setTurnSensitivity(car.getTurnSensitivity() + 2.0f);
+                }
+                else {
+                    car.setMovementAngle(car.getMovementAngle() + glm::vec3(0.0f, 3.0f, 0.0f));
+                }
                 return;
             case GLFW_KEY_D:
-                moveLeftCamera();
+                if (car.wheelsCollide()) {
+                    car.setTurnSensitivity(car.getTurnSensitivity() - 2.0f);
+                }
+                else {
+                    car.setMovementAngle(car.getMovementAngle() - glm::vec3(0.0f, 3.0f, 0.0f));
+                }
                 return;
             case GLFW_KEY_E:
-                moveUpCamera();
+                if (!car.wheelsCollide()) {
+                    car.setMovementAngle(car.getMovementAngle() + glm::vec3(3.0f, 0.0f, 0.0f));
+                }
                 return;
             case GLFW_KEY_Q:
-                moveDownCamera();
+                if (!car.wheelsCollide()) {
+                    car.setMovementAngle(car.getMovementAngle() - glm::vec3(3.0f, 0.0f, 0.0f));
+                }
                 return;
             case GLFW_KEY_UP:
-                globalRocketLeague->getCar().setForwardAcceleration(globalRocketLeague->getCar().getForwardAcceleration() + 8.0f);
+                moveBackwardCamera();
                 return;
             case GLFW_KEY_DOWN:
-                globalRocketLeague->getCar().setForwardAcceleration(globalRocketLeague->getCar().getForwardAcceleration() - 8.0f);
+                moveForwardCamera();
                 return;
             case GLFW_KEY_LEFT:
-                moveLeftCar(tree);
+                moveRightCamera();
                 return;
             case GLFW_KEY_RIGHT:
-                moveRightCar(tree);
+                moveLeftCamera();
                 return;
-            /*case GLFW_KEY_SPACE: {
-                //tree = scene->getRootTransformTree()->addChild({{}, glm::identity<glm::quat>(), glm::vec3{0.2f, 0.2f, 0.2f}})->addObject(globalCarMesh);
-                //glm::vec3 forward{glm::vec3{0.0f, 0.0f, -1.0f} * scene->getCamera().getRotation()};
-                /*tree = scene->getRootTransformTree()->addChild({{}, glm::identity<glm::quat>(), glm::vec3{0.4f, 0.2f, 0.8f}})->addObject(globalCarMesh);
-                glm::vec3 forward{glm::vec3{0.0f, 0.0f, -1.0} * scene->getCamera().getRotation()};
-
-                RigidBody::Ref cube{RigidBody::make(
-                    tree,
-                    &cubeCollider,
-                    1.0f,
-                    PhysicsMaterial{0.5f, 0.5f, 0.0f, 0.0f},
-                    0,
-                    false,
-                    scene->getCamera().getPosition(),
-                    8.0f * forward,
-                    false
-                    //glm::conjugate(scene->getCamera().getRotation()) * glm::angleAxis(glm::radians(45.0f), glm::normalize(glm::vec3{0.5f, 0.0f, 1.0f}))
-                    //glm::vec3{2.0f, 2.0f, 0.0f}
-                )};
-
-                physicsEnginePointer->addRigidBody(cube);
-                return;
-            }*/
             case GLFW_KEY_LEFT_CONTROL:
                 if (captureMouse) {
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -104,58 +104,65 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                     //glfwSetCursorPosCallback(window, nullptr);
                     captureMouse = true;
                 }
-            /*case GLFW_KEY_TAB:
-                impulseModel = !impulseModel;
-                return;*/
             default:
                 return;
         }
     }
     else if (action == GLFW_RELEASE) {
-        glm::vec3 originalFrontVector;
-        glm::vec3 rotatedFrontVector; 
-        glm::vec3 rotationAxis(0.0f, 1.0f, 0.0f);       
-        glm::quat rotationQuaternion; 
-        float angleRadians;  
-
         switch (key) {
             case GLFW_KEY_W:
-                moveForwardCamera();
+                if (car.wheelsCollide()) {
+                    car.setForwardAcceleration(car.getForwardAcceleration() - 8.0f);
+                }
+                else {
+                    car.setMovementAngle(car.getMovementAngle() + glm::vec3(0.0f, 0.0f, 3.0f));
+                }
                 return;
             case GLFW_KEY_S:
-                moveBackwardCamera();
+                if (car.wheelsCollide()) {
+                    car.setForwardAcceleration(car.getForwardAcceleration() + 8.0f);
+                }
+                else {
+                    car.setMovementAngle(car.getMovementAngle() - glm::vec3(0.0f, 0.0f, 3.0f));
+                }
                 return;
             case GLFW_KEY_A:
-                moveLeftCamera();
+                if (car.wheelsCollide()) {
+                    car.setTurnSensitivity(car.getTurnSensitivity() - 2.0f);
+                }
+                else {
+                    car.setMovementAngle(car.getMovementAngle() - glm::vec3(0.0f, 3.0f, 0.0f));
+                }
                 return;
             case GLFW_KEY_D:
-                moveRightCamera();
+                if (car.wheelsCollide()) {
+                    car.setTurnSensitivity(car.getTurnSensitivity() + 2.0f);
+                }
+                else {
+                    car.setMovementAngle(car.getMovementAngle() + glm::vec3(0.0f, 3.0f, 0.0f));
+                }
                 return;
             case GLFW_KEY_E:
-                moveDownCamera();
+                if (!car.wheelsCollide()) {
+                    car.setMovementAngle(car.getMovementAngle() - glm::vec3(3.0f, 0.0f, 0.0f));
+                }
                 return;
             case GLFW_KEY_Q:
-                moveUpCamera();
+                if (!car.wheelsCollide()) {
+                    car.setMovementAngle(car.getMovementAngle() + glm::vec3(3.0f, 0.0f, 0.0f));
+                }
                 return;
             case GLFW_KEY_UP:
-                globalRocketLeague->getCar().setForwardAcceleration(globalRocketLeague->getCar().getForwardAcceleration() - 8.0f);
+                moveForwardCamera();
                 return;
             case GLFW_KEY_DOWN:
-                globalRocketLeague->getCar().setForwardAcceleration(globalRocketLeague->getCar().getForwardAcceleration() + 8.0f);
+                moveBackwardCamera();
                 return;
             case GLFW_KEY_LEFT:
-                originalFrontVector = globalRocketLeague->getCar().getFront();
-                angleRadians = glm::radians(-2.0f);
-                rotationQuaternion = glm::angleAxis(angleRadians, rotationAxis);
-                rotatedFrontVector = glm::rotate(rotationQuaternion, originalFrontVector);
-                globalRocketLeague->getCar().setFront(rotatedFrontVector);
+                moveLeftCamera();
                 return;
             case GLFW_KEY_RIGHT:
-                originalFrontVector = globalRocketLeague->getCar().getFront();
-                angleRadians = glm::radians(2.0f);
-                rotationQuaternion = glm::angleAxis(angleRadians, rotationAxis);
-                rotatedFrontVector = glm::rotate(rotationQuaternion, originalFrontVector);
-                globalRocketLeague->getCar().setFront(rotatedFrontVector);
+                moveRightCamera();
                 return;
             default:
                 return;

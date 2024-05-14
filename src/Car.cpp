@@ -13,7 +13,6 @@ Car::Car(TransformTree* transformTree) :
     position{glm::vec3(0.0f)},
     rotation{glm::identity<glm::quat>()},
     velocity{glm::vec3(0.0f)},
-    front{glm::vec3(1.,0.,0.)},
     angularVelocity{glm::vec3(0.0f)},
     forwardVelocity{0.0f},
     forwardAcceleration{0.0f},
@@ -44,13 +43,13 @@ Car& Car::setVelocity(const glm::vec3& velocity) {
     return *this;
 }
 
-Car& Car::setFront(const glm::vec3& front) {
-    this->front = front;
+Car& Car::setAngularVelocity(const glm::vec3 angularVelocity) {
+    this->angularVelocity = angularVelocity;
     return *this;
 }
 
-Car& Car::setAngularVelocity(const glm::vec3 angularVelocity) {
-    this->angularVelocity = angularVelocity;
+Car& Car::setMovementAngle(const glm::vec3 movementAngle) {
+    this->movementAngle = movementAngle;
     return *this;
 }
 
@@ -94,12 +93,12 @@ glm::vec3 Car::getVelocity() const {
     return velocity;
 }
 
-glm::vec3 Car::getFront() const{
-    return front;
-}
-
 glm::vec3 Car::getAngularVelocity() const {
     return angularVelocity;
+}
+
+glm::vec3 Car::getMovementAngle() const {
+    return movementAngle;
 }
 
 float Car::getForwardVelocity() const {
@@ -120,6 +119,10 @@ float Car::getTurnSensitivity() const {
 
 glm::vec3 Car::getUpVector() const {
     return rotation * glm::vec3{0.0f, 1.0f, 0.0f};
+}
+
+glm::vec3 Car::getFrontVector() const {
+    return rotation * glm::vec3{1.0f, 0.0f, 0.0f};
 }
 
 bool Car::wheelsCollide() const {
@@ -162,21 +165,30 @@ void Car::updateAnimations(float delta) {
 }
 
 void Car::updatePhysics(float delta) {
-    rotation = glm::quat{delta * angularVelocity} * rotation;
     velocity += globalRocketLeague->getGravity() * delta;
-    velocity += rotation * glm::vec3(forwardAcceleration, 0.0f, 0.0f) * delta;
 
     const float velocityLength{glm::length(velocity)};
+    if (doWheelsCollide) {
+        velocity += rotation * glm::vec3(forwardAcceleration, 0.0f, 0.0f) * delta;
+        /*velocity -= 0.2f * glm::dot(velocity, getFrontVector()) * getFrontVector();
+        velocity -= 0.8f * velocityLength * glm::cross(getFrontVector(), getUpVector());*/
+    }
+
+    
     if (velocityLength > 10.0f) {
         velocity *= 10.0f / velocityLength;
     }
+
+    glm::quat nextRotation{glm::quat{delta * angularVelocity} * rotation /* * glm::quat(delta * movementAngle)*/};
+    nextRotation *= glm::quat(delta * turnSensitivity * getUpVector());
+
     glm::vec3 nextPosition{position + velocity * delta};
 
     bool intersects{true};
     std::size_t i{};
     doWheelsCollide = false;
     while (intersects && position != nextPosition && i < 10) {
-        std::optional<Intersection> intersectionOpt{collideCarArena(position, nextPosition, rotation)};
+        std::optional<Intersection> intersectionOpt{collideCarArena(position, nextPosition, rotation, rotation)};
         intersects = intersectionOpt.has_value();
         if (intersects) {
             Intersection intersection{intersectionOpt.value()};
@@ -197,6 +209,7 @@ void Car::updatePhysics(float delta) {
             ++i;
         }
     }
+    rotation = nextRotation;
     position = nextPosition;
 
     transformTree->transform

@@ -13,12 +13,12 @@ float sign(float value) {
     }
 }
 
-std::optional<Intersection> collideCarArena(const glm::vec3& carPosition1, const glm::vec3& carPosition2, const glm::quat& carRotation) {
+std::optional<Intersection> collideCarArena(const glm::vec3& carPosition1, const glm::vec3& carPosition2, const glm::quat& carRotation1, const glm::quat& carRotation2) {
     Intersection bestIntersection;
     bestIntersection.t = 2.0f;
     for (const glm::vec3& hitboxPoint : carHitbox) {
-        glm::vec3 point1{carRotation * hitboxPoint + carPosition1};
-        glm::vec3 point2{carRotation * hitboxPoint + carPosition2};
+        glm::vec3 point1{carRotation1 * hitboxPoint + carPosition1};
+        glm::vec3 point2{carRotation2 * hitboxPoint + carPosition2};
 
         std::optional<Intersection> intersection{collideBallArena(point1, point2, 0.0f)};
         if (intersection.has_value() && intersection.value().t < bestIntersection.t) {
@@ -97,21 +97,13 @@ std::optional<Intersection> collideBallArena(const glm::vec3& ballPositionStart,
     }
 
     /*const float c = std::abs(arenaHeight - radius);
-    const float centeredStartY{ballPositionStart.y + arenaHeight * 0.5f};
-    const float centeredEndY{ballPositionEnd.y + arenaHeight * 0.5f};
-    std::cout << centeredStartY <<' ' << centeredEndY <<'\n';
-    if (std::abs(centeredStartY) < std::abs(c) && std::abs(c) < std::abs(centeredEndY)) {
-        const float tp{(c - std::abs(centeredStartY)) / std::abs(centeredEndY - centeredStartY)};
+    if (std::abs(ballPositionStart.y) < std::abs(c) && std::abs(c) < std::abs(ballPositionEnd.y)) {
+        const float tp{(c - std::abs(ballPositionStart.y)) / std::abs(ballPositionEnd.y - ballPositionStart.y)};
         if (tp < t) {
             t = tp;
             collisionPoint = ballPositionStart + (ballPositionEnd - ballPositionStart) * t;
-            normal = glm::vec3{0.0f, collisionPoint.y + arenaHeight * 0.5f > 0.0f ? -1.0f : 1.0f, 0.0f};
+            normal = glm::vec3{0.0f, 0.0f, collisionPoint.y > 0.0f ? -1.0f : 1.0f};
         }
-    }*/
-
-    /*const float b = std::abs(arenaWidth - radius);
-    if (std::abs(ballPositionStart.z) < std::abs(b) && std::abs(b) < std::abs(ballPositionEnd.z)) {
-
     }*/
 
     if (ballPositionStart.y != ballPositionEnd.y && ballPositionStart.y >= radius && radius >= ballPositionEnd.y) {
@@ -122,16 +114,6 @@ std::optional<Intersection> collideBallArena(const glm::vec3& ballPositionStart,
             normal = glm::vec3{0.0f, 1.0f, 0.0f};
         }
     }
-
-    /*const float c = std::abs(arenaHeight - radius);
-    if (ballPositionStart.y != ballPositionEnd.y && std::abs(ballPositionStart.y - arenaHeight * 0.5f) < std::abs(c) && std::abs(c) < std::abs(ballPositionEnd.y - arenaHeight * 0.5f)) {
-        const float tp{std::abs((c - ballPositionStart + arenaHeight * 0.5f).y / (ballPositionEnd - ballPositionStart).y)};
-        if (tp < t) {
-            t = tp;
-            collisionPoint = ballPositionStart + (ballPositionEnd - ballPositionStart) * t;
-            normal = glm::vec3{0.0f, (collisionPoint.y > arenaHeight * 0.5f) ? -1.0f : 1.0f, 0.0f};
-        }
-    }*/
 
     if (t < 1.0f) {
         return std::make_optional(Intersection{t, normal, collisionPoint});

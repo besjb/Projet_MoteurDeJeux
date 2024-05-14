@@ -54,7 +54,7 @@ float sign(float value);
 
 const float invSqrt5{1.0f / std::sqrt(5.0f)};
 
-std::optional<Intersection> collideCarArena(const glm::vec3& carPosition1, const glm::vec3& carPosition2, const glm::quat& carRotation);
+std::optional<Intersection> collideCarArena(const glm::vec3& carPosition1, const glm::vec3& carPosition2, const glm::quat& carRotation1, const glm::quat& carRotation2);
 
 std::optional<Intersection> collideCarBall();
 
