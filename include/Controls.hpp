@@ -17,9 +17,11 @@ void moveLeftCar(TransformTree* t);
 void moveRightCar(TransformTree* t);
 
 // CAMERA
+/*
 void moveForwardCamera();
 void moveBackwardCamera();
 void moveLeftCamera();
 void moveRightCamera();
 void moveUpCamera();
 void moveDownCamera();
+*/

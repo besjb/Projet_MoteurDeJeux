@@ -62,16 +62,16 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 //car.setMovementAngle(car.getMovementAngle() - glm::vec3(3.0f, 0.0f, 0.0f));
                 return;
             case GLFW_KEY_UP:
-                moveBackwardCamera();
+                //moveBackwardCamera();
                 return;
             case GLFW_KEY_DOWN:
-                moveForwardCamera();
+                //moveForwardCamera();
                 return;
             case GLFW_KEY_LEFT:
-                moveRightCamera();
+                //moveRightCamera();
                 return;
             case GLFW_KEY_RIGHT:
-                moveLeftCamera();
+                //moveLeftCamera();
                 return;
             case GLFW_KEY_LEFT_CONTROL:
                 if (captureMouse) {
@@ -113,16 +113,16 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 //car.setMovementAngle(car.getMovementAngle() + glm::vec3(3.0f, 0.0f, 0.0f));
                 return;
             case GLFW_KEY_UP:
-                moveForwardCamera();
+                //moveForwardCamera();
                 return;
             case GLFW_KEY_DOWN:
-                moveBackwardCamera();
+                //moveBackwardCamera();
                 return;
             case GLFW_KEY_LEFT:
-                moveLeftCamera();
+                //moveLeftCamera();
                 return;
             case GLFW_KEY_RIGHT:
-                moveRightCamera();
+                //moveRightCamera();
                 return;
             default:
                 return;
@@ -152,7 +152,7 @@ void moveRightCar(TransformTree* t){
 }
 
 /* ===== CAMERA ===== */
-
+/*
 void moveForwardCamera(){
     cameraMovement.z += 3.0;
 }
@@ -176,3 +176,4 @@ void moveUpCamera(){
 void moveDownCamera(){
     cameraMovement.y -= 3.0;
 }
+*/

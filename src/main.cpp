@@ -53,7 +53,7 @@ void cursorCallback(GLFWwindow* window, double x, double y) {
         glm::quat leftRightRotation{glm::angleAxis(glm::radians<float>(deltaT * x * sensitivity), glm::vec3{0.0f, 1.0f, 0.0f})};
         glm::quat upDownRotation{glm::angleAxis(glm::radians<float>(deltaT * y * sensitivity), glm::vec3{1.0f, 0.0f, 0.0f})};
         
-        scene->getCamera().setRotation(upDownRotation * scene->getCamera().getRotation() * leftRightRotation);
+        //scene->getCamera().setRotation(upDownRotation * scene->getCamera().getRotation() * leftRightRotation);
         glfwSetCursorPos(window, 0, 0);
     }
 }
@@ -146,9 +146,9 @@ int main(int argc, char** argv) {
 
         double currentTime{std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::system_clock::now().time_since_epoch()).count()};
         deltaT = static_cast<float>(currentTime - lastTime);
-        if (cameraMovement != glm::vec3{}) {
+        /*if (cameraMovement != glm::vec3{}) {
             rocketLeague.getScene().getCamera().moveRelative(deltaT * cameraMovement);
-        }
+        }*/
         
         glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

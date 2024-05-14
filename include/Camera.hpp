@@ -55,6 +55,8 @@ public:
 
     glm::mat4 getViewProjectionMatrix() const;
 
+    void update(const glm::vec3& targetPosition, const glm::quat& carRotation);
+
 private:
     
     glm::vec3 position;

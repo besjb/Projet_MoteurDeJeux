@@ -91,3 +91,23 @@ glm::mat4 Camera::getProjectionMatrix() const {
 glm::mat4 Camera::getViewProjectionMatrix() const {
     return getProjectionMatrix() * getViewMatrix();
 }
+
+void Camera::update(const glm::vec3& carPosition, const glm::quat& carRotation) {
+    glm::vec3 offset = glm::vec3(-3.0f, 1.0f, 0.0f);
+    
+    glm::vec3 newPosition = carPosition + glm::rotate(carRotation, offset);
+    
+    glm::vec3 forwardDirection = glm::normalize(glm::rotate(glm::inverse(carRotation), glm::vec3(1.0f, 0.0f, 0.0f)));
+    
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::quat newRotation = glm::quatLookAt(-forwardDirection, up);
+    
+    setPosition(newPosition);
+    setRotation(newRotation);
+}
+
+
+
+
+
+

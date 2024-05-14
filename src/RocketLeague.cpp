@@ -19,6 +19,7 @@ glm::vec3 RocketLeague::getGravity() const {
 
 void RocketLeague::update(float delta) {
     car.updateAnimations(delta);
+    scene.getCamera().update(car.getPosition(), car.getRotation());
     updatePhysics(delta);
 }
 
@@ -97,8 +98,8 @@ void RocketLeague::init(float screenRatio) {
     };
     
     scene.getCamera() = Camera{
-        {-9.0f, 6.0f, -9.0f},
-        glm::vec3{0.0f, -4.0f, 0.0f},
+        {-1.0f, 5.0f, 0.0f},
+        glm::vec3{0.0f, 0.0f, 0.0f},
         60.0f,
         screenRatio
     };
