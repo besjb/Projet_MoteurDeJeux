@@ -15,6 +15,23 @@ extern RocketLeague* globalRocketLeague;
 
 glm::vec3 mouv = glm::vec3(0.,0.,0.);
 
+void mouseCallback(GLFWwindow* window, int button, int action, int mods) {
+    Car& car = globalRocketLeague->getCar();
+    if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+        if (action == GLFW_PRESS) {
+            if (car.wheelsCollide()) {
+                car.startJump();
+            }
+            else if (car.canDoubleJump()) {
+                car.doubleJump();
+            }
+        }
+        else if (action == GLFW_RELEASE && car.isJumping()) {
+            car.stopJump();
+        }
+    }
+}
+
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     Scene* scene{static_cast<Scene*>(glfwGetWindowUserPointer(window))};
     static TransformTree* tree;

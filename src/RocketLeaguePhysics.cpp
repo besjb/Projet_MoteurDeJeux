@@ -75,7 +75,7 @@ std::optional<Intersection> collideBallArena(const glm::vec3& ballPositionStart,
     glm::vec3 normal;
     glm::vec3 collisionPoint;
 
-    /*const float a = std::abs(arenaLength - radius);
+    const float a = std::abs(arenaLength - radius);
     if (std::abs(ballPositionStart.x) < std::abs(a) && std::abs(a) < std::abs(ballPositionEnd.x)) {
 
     }
@@ -83,7 +83,7 @@ std::optional<Intersection> collideBallArena(const glm::vec3& ballPositionStart,
     const float b = std::abs(arenaWidth - radius);
     if (std::abs(ballPositionStart.z) < std::abs(b) && std::abs(b) < std::abs(ballPositionEnd.z)) {
 
-    }*/
+    }
 
     if (ballPositionStart.y != ballPositionEnd.y && ballPositionStart.y >= radius && radius >= ballPositionEnd.y) {
         const float tp{std::abs(ballPositionStart.y / (ballPositionEnd - ballPositionStart).y)};
