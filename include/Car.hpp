@@ -21,6 +21,8 @@ public:
 
     Car& setVelocity(const glm::vec3& velocity);
 
+    Car& setFront(const glm::vec3& front);
+
     Car& setAngularVelocity(const glm::vec3 angularVelocity);
 
     Car& setForwardVelocity(float forwardVelocity);
@@ -42,6 +44,8 @@ public:
     glm::vec3 getVelocity() const;
 
     glm::vec3 getAngularVelocity() const;
+
+    glm::vec3 getFront() const;
     
     float getForwardVelocity() const;
 
@@ -62,6 +66,7 @@ private:
     glm::quat rotation;
     glm::vec3 velocity;
     glm::vec3 angularVelocity;
+    glm::vec3 front;
 
     float forwardVelocity;
     float forwardAcceleration;

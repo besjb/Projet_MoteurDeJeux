@@ -13,6 +13,7 @@ Car::Car(TransformTree* transformTree) :
     position{glm::vec3(0.0f)},
     rotation{glm::identity<glm::quat>()},
     velocity{glm::vec3(0.0f)},
+    front{glm::vec3(1.,0.,0.)},
     angularVelocity{glm::vec3(0.0f)},
     forwardVelocity{0.0f},
     forwardAcceleration{0.0f},
@@ -37,6 +38,11 @@ Car& Car::setRotation(const glm::quat& rotation) {
 
 Car& Car::setVelocity(const glm::vec3& velocity) {
     this->velocity = velocity;
+    return *this;
+}
+
+Car& Car::setFront(const glm::vec3& front) {
+    this->front = front;
     return *this;
 }
 
@@ -85,6 +91,10 @@ glm::vec3 Car::getVelocity() const {
     return velocity;
 }
 
+glm::vec3 Car::getFront() const{
+    return front;
+}
+
 glm::vec3 Car::getAngularVelocity() const {
     return angularVelocity;
 }
@@ -107,6 +117,7 @@ float Car::getTurnSensitivity() const {
 
 void Car::updatePhysics(float delta) {
     rotation = glm::quat{delta * angularVelocity} * rotation;
+    rotation *= front;
     velocity += globalRocketLeague->getGravity() * delta;
     velocity += rotation * glm::vec3(forwardAcceleration, 0.0f, 0.0f) * delta;
     if (glm::length(velocity) > 25.0f) {
