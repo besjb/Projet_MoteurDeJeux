@@ -1,16 +1,71 @@
-/*#pragma once
+#pragma once
 
 #include <glm/glm.hpp>
-#include <Mesh.hpp>
+#include <glm/gtc/quaternion.hpp>
 
-class Car : public Mesh {
+#include <array>
+
+#include "Scene.hpp"
+#include "Utility.hpp"
+
+class Car {
 public:
-    Car(MeshMaterial* material);
 
-    ~Car();
+    Car(TransformTree* transformTree);
 
-protected:
+    Car& setMass(float mass);
+
+    Car& setPosition(const glm::vec3& position);
+
+    Car& setRotation(const glm::quat& rotation);
+
+    Car& setVelocity(const glm::vec3& velocity);
+
+    Car& setAngularVelocity(const glm::vec3 angularVelocity);
+
+    Car& setForwardVelocity(float forwardVelocity);
+
+    Car& setForwardAcceleration(float forwardAcceleration);
+
+    Car& setForwardDeceleration(float forwardDeceleration);
+
+    Car& setTurnSensitivity(float turnSensitivity);
+
+    TransformTree* getTransformTree() const;
+
+    float getMass() const;
+
+    glm::vec3 getPosition() const;
+
+    glm::quat getRotation() const;
+
+    glm::vec3 getVelocity() const;
+
+    glm::vec3 getAngularVelocity() const;
+    
+    float getForwardVelocity() const;
+
+    float getForwardAcceleration() const;
+    
+    float getForwardDeceleration() const;
+
+    float getTurnSensitivity() const;
+
+    void updatePhysics(float delta);
 
 private:
 
-};*/
+    TransformTree* transformTree;
+
+    float mass;
+    glm::vec3 position;
+    glm::quat rotation;
+    glm::vec3 velocity;
+    glm::vec3 angularVelocity;
+
+    float forwardVelocity;
+    float forwardAcceleration;
+    float forwardDeceleration;
+    float turnSensitivity;
+
+};

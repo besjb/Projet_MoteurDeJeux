@@ -13,7 +13,6 @@
 #include "Mesh.hpp"
 #include "Utility.hpp"
 #include "LightSource.hpp"
-#include "Physics.hpp"
 #include "Controls.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -29,20 +28,21 @@
 #include <chrono>
 #include <limits>
 
+#include "RocketLeague.hpp"
+
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 
 glm::vec3 cameraMovement;
-std::vector<RigidBody> rigidBodies;
 Mesh* globalEarthMesh;
 Mesh* globalCarMesh;
 float deltaT{};
 bool impulseModel{false};
-Scene* scenePointer;
+
+RocketLeague* globalRocketLeague;
 
 bool captureMouse{false};
-PhysicsEngine* physicsEnginePointer;
 
 void cursorCallback(GLFWwindow* window, double x, double y) {
     if (!captureMouse) {
@@ -107,15 +107,21 @@ int main(int argc, char** argv) {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
+    RocketLeague rocketLeague(static_cast<float>(windowWidth) / windowHeight);
+
+    glfwSetWindowUserPointer(window, &rocketLeague.getScene());
+
+    initImgui(window);
+
+    /*ShaderProgram meshShaderProgram;
     Shader vertexShader{"./shaders/mesh/phong.vert", Shader::Type::VERTEX};
     Shader fragmentShader{"./shaders/mesh/phong.frag", Shader::Type::FRAGMENT};
 
-    ShaderProgram meshShaderProgram;
     meshShaderProgram.attachShader(vertexShader);
     meshShaderProgram.attachShader(fragmentShader);
     meshShaderProgram.link();
 
-    MeshMaterial earthMaterial{
+    auto arenaMaterial = MeshMaterial{
         &meshShaderProgram,
         loadTexture("textures/solar/earth.jpg"),
         {0.15f, 0.15f, 0.15f},
@@ -124,132 +130,13 @@ int main(int argc, char** argv) {
         16.0f
     };
 
-    Mesh earthMesh{Mesh::loadFromFile("./models/cube.obj", &earthMaterial)};
-    globalEarthMesh = &earthMesh;
+    auto arenaModel = Mesh::loadFromFile("./models/sphere.obj", &arenaMaterial);
 
-    MeshMaterial carMaterial{
-        &meshShaderProgram,
-        loadTexture("models/octane-rocket-league-car/textures/Octane_Chasis_Map.png"),
-        {0.15f, 0.15f, 0.15f},
-        {1.0f, 1.0f, 1.0f},
-        {0.3f, 0.3f, 0.3f},
-        16.0f
-    };
-
-    Mesh carMesh{Mesh::loadFromFile("./models/cube.obj", &carMaterial)};
-    globalCarMesh = &carMesh;
-
-    Scene scene{
-        // Source de lumière
-        {
-            {0.0f, 6.0f, 0.0f},
-            {1.0f, 1.0f, 1.0f}
-        },
-        // Caméra
-        {
-            {-9.0f, 6.0f, -9.0f},
-            glm::vec3{0.0f, -4.0f, 0.0f},
-            60.0f,
-            static_cast<float>(windowWidth) / windowHeight
-        }
-    };
-
-    scenePointer = &scene;
-
-    glfwSetWindowUserPointer(window, &scene);
-
-    initImgui(window);
-
-    PhysicsEngine physicsEngine;
-    physicsEnginePointer = &physicsEngine;
-    ForceField::Ref gravity{ForceField::global(ForceField::uniformForceField({0.0f, -9.81f, 0.0f}))};
-
-    physicsEngine.addForceField(gravity);
-
-    OBBCollider planeCollider{{16.0f, 1.0f, 16.0f}};
-
-    TransformTree* arenaTree{scene.getRootTransformTree()};
-    RigidBody::Ref plane{RigidBody::make(
-        arenaTree->addChild({{}, glm::identity<glm::quat>(), {16.0f, 1.0f, 16.0f}})->addObject(&earthMesh),
-        &planeCollider,
-        -1.0f,
-        PhysicsMaterial{0.5f, 0.0f, 0.0f, 0.0f},
-        0,
-        true,
-        glm::vec3{2.0f, 0.0f, 0.0f},
-        glm::vec3{},
-        true
-    )};
-    physicsEngine.addRigidBody(plane);
-
-    /*RigidBody::Ref wall1{RigidBody::make(
-        arenaTree->addChild({{}, glm::identity<glm::quat>(), {16.0f, 1.0f, 16.0f}})->addObject(&earthMesh),
-        &planeCollider,
-        -1.0f,
-        PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
-        0,
-        true,
-        glm::vec3{16.0f, 0.0f, 0.0f},
-        glm::vec3{0.0f, 0.0f, 0.0f},
-        true,
-        glm::angleAxis(glm::radians(90.0f), glm::vec3{0.0f, 0.0f, 1.0f})
-    )};
-    physicsEngine.addRigidBody(wall1);
-
-    RigidBody::Ref wall2{RigidBody::make(
-        arenaTree->addChild({{}, glm::identity<glm::quat>(), {16.0f, 1.0f, 16.0f}})->addObject(&earthMesh),
-        &planeCollider,
-        -1.0f,
-        PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
-        0,
-        true,
-        glm::vec3{-16.0f, 0.0f, 0.0f},
-        glm::vec3{0.0f, 0.0f, 0.0f},
-        true,
-        glm::angleAxis(glm::radians(90.0f), glm::vec3{0.0f, 0.0f, 1.0f})
-    )};
-    physicsEngine.addRigidBody(wall2);
-
-    RigidBody::Ref wall3{RigidBody::make(
-        arenaTree->addChild({{}, glm::identity<glm::quat>(), {16.0f, 1.0f, 16.0f}})->addObject(&earthMesh),
-        &planeCollider,
-        -1.0f,
-        PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
-        0,
-        true,
-        glm::vec3{0.0f, 0.0f, 16.0f},
-        glm::vec3{0.0f, 0.0f, 0.0f},
-        true,
-        glm::angleAxis(glm::radians(90.0f), glm::vec3{1.0f, 0.0f, 0.0f})
-    )};
-    physicsEngine.addRigidBody(wall3);
-
-    RigidBody::Ref wall4{RigidBody::make(
-        arenaTree->addChild({{}, glm::identity<glm::quat>(), {16.0f, 1.0f, 16.0f}})->addObject(&earthMesh),
-        &planeCollider,
-        -1.0f,
-        PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
-        0,
-        true,
-        glm::vec3{0.0f, 0.0f, -16.0f},
-        glm::vec3{0.0f, 0.0f, 0.0f},
-        true,
-        glm::angleAxis(glm::radians(90.0f), glm::vec3{1.0f, 0.0f, 0.0f})
-    )};
-    physicsEngine.addRigidBody(wall4);*/
-
-    std::vector<glm::vec3> verts{
-        glm::vec3(-1.0f, 0.05f, 0.05f),
-        glm::vec3(-1.0f, 0.05f, -0.05f),
-        glm::vec3(-1.0f, -0.05f, 0.05f),
-        glm::vec3(-1.0f, -0.05f, -0.05f),
-        glm::vec3(1.0f, 0.0f, 0.0f)
-        //glm::vec3(-1.87f, 0.11f, 2.3f),
-        //glm::vec3(-0.96f, -2.15f, 1.21f),
-        //glm::vec3(1.47f, -1.94f, 2.55f),
-        //glm::vec3(-0.64f, 1.64f, 1.0f)
-    };
-    std::cout << glm::to_string(geometry::convexSetAverage(verts));
+    rocketLeague.getScene().getRootTransformTree()->addChild(Transform().setScale(glm::vec3(0.08f)).setTranslation(glm::vec3(-0.6f, 0.55f, 0.3f)))->addObject(&arenaModel);
+    rocketLeague.getScene().getRootTransformTree()->addChild(Transform().setScale(glm::vec3(0.08f)).setTranslation(glm::vec3(0.6f, 0.2f, 0.3f)))->addObject(&arenaModel);
+    rocketLeague.getScene().getRootTransformTree()->addChild(Transform().setScale(glm::vec3(0.08f)).setTranslation(glm::vec3(-0.0f, 0.5f, 0.0f)))->addObject(&arenaModel);
+    rocketLeague.getScene().getRootTransformTree()->addChild(Transform().setScale(glm::vec3(0.08f)).setTranslation(glm::vec3(0.6f, -0.0f, 0.3f)))->addObject(&arenaModel);
+    rocketLeague.getScene().getRootTransformTree()->addChild(Transform().setScale(glm::vec3(0.08f)).setTranslation(glm::vec3(-0.55f, -0.0f, 0.3f)))->addObject(&arenaModel);*/
 
     double lastTime{std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::system_clock::now().time_since_epoch()).count()};
     while (!glfwWindowShouldClose(window)) {
@@ -258,14 +145,14 @@ int main(int argc, char** argv) {
         double currentTime{std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::system_clock::now().time_since_epoch()).count()};
         deltaT = static_cast<float>(currentTime - lastTime);
         if (cameraMovement != glm::vec3{}) {
-            scene.getCamera().moveRelative(deltaT * cameraMovement);
+            rocketLeague.getScene().getCamera().moveRelative(deltaT * cameraMovement);
         }
         
         glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        physicsEngine.tick(deltaT);
-        scene.render();
+        rocketLeague.update(deltaT);
+        rocketLeague.render();
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -289,9 +176,8 @@ int main(int argc, char** argv) {
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
-    meshShaderProgram.destroy();
-
     glfwTerminate();
+    //meshShaderProgram.destroy();
     
     return 0;
 }

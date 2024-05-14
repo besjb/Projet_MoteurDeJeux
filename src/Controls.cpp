@@ -1,7 +1,7 @@
 #include "Controls.hpp"
 #include "Scene.hpp"
 #include "Mesh.hpp"
-#include "Physics.hpp"
+#include "RocketLeague.hpp"
 
 #include <glm/glm.hpp>
 #include <GL/glew.h>
@@ -11,10 +11,7 @@ extern bool captureMouse;
 extern Mesh* globalCarMesh;
 extern glm::vec3 cameraMovement;
 
-extern PhysicsEngine* physicsEnginePointer;
-
-OBBCollider cubeCollider{glm::vec3{0.4f, 0.2f, 0.8f}};
-//CapsuleCollider cubeCollider(0.8f, 0.6f);
+extern RocketLeague* globalRocketLeague;
 
 glm::vec3 mouv = glm::vec3(0.,0.,0.);
 
@@ -56,10 +53,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             case GLFW_KEY_RIGHT:
                 moveRightCar(tree);
                 return;
-            case GLFW_KEY_SPACE: {
+            /*case GLFW_KEY_SPACE: {
                 //tree = scene->getRootTransformTree()->addChild({{}, glm::identity<glm::quat>(), glm::vec3{0.2f, 0.2f, 0.2f}})->addObject(globalCarMesh);
                 //glm::vec3 forward{glm::vec3{0.0f, 0.0f, -1.0f} * scene->getCamera().getRotation()};
-                tree = scene->getRootTransformTree()->addChild({{}, glm::identity<glm::quat>(), glm::vec3{0.4f, 0.2f, 0.8f}})->addObject(globalCarMesh);
+                /*tree = scene->getRootTransformTree()->addChild({{}, glm::identity<glm::quat>(), glm::vec3{0.4f, 0.2f, 0.8f}})->addObject(globalCarMesh);
                 glm::vec3 forward{glm::vec3{0.0f, 0.0f, -1.0} * scene->getCamera().getRotation()};
 
                 RigidBody::Ref cube{RigidBody::make(
@@ -78,7 +75,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
                 physicsEnginePointer->addRigidBody(cube);
                 return;
-            }
+            }*/
             case GLFW_KEY_LEFT_CONTROL:
                 if (captureMouse) {
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);

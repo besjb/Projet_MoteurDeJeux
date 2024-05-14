@@ -63,7 +63,7 @@ void Mesh::render() {
     glEnableVertexAttribArray(2);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_SHORT, nullptr);
+    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
@@ -113,7 +113,7 @@ Mesh Mesh::loadFromFile(std::string_view modelPath, MeshMaterial* material) {
 
     Mesh mesh{material};
 
-    std::unordered_map<UniqueVertexData, std::uint16_t> uniqueVertices;
+    std::unordered_map<UniqueVertexData, std::uint32_t> uniqueVertices;
 
     for (const tinyobj::shape_t& shape : shapes) {
         for (const tinyobj::index_t& index : shape.mesh.indices) {
@@ -137,13 +137,13 @@ Mesh Mesh::loadFromFile(std::string_view modelPath, MeshMaterial* material) {
             };
 
             if (uniqueVertices.count(uniqueVertexData) == 0) {
-                uniqueVertices[uniqueVertexData] = static_cast<std::uint16_t>(mesh.vertices.size());
+                uniqueVertices[uniqueVertexData] = static_cast<std::uint32_t>(mesh.vertices.size());
                 mesh.vertices.push_back(uniqueVertexData.position);
                 mesh.texCoords.push_back(uniqueVertexData.texCoord);
                 mesh.normals.push_back(uniqueVertexData.normal);
             }
 
-            mesh.indices.push_back(uniqueVertices[uniqueVertexData]);
+            mesh.indices.push_back(uniqueVertices[uniqueVertexData]/*mesh.indices.size()*/);
         }
     }
 
@@ -162,5 +162,5 @@ void Mesh::updateBuffers() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * texCoords.size(), texCoords.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * indices.size(), indices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * indices.size(), indices.data(), GL_STATIC_DRAW);
 }
