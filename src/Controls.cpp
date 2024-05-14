@@ -144,18 +144,18 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 globalRocketLeague->getCar().setForwardAcceleration(globalRocketLeague->getCar().getForwardAcceleration() + 8.0f);
                 return;
             case GLFW_KEY_LEFT:
-                originalFrontVector = globalRocketLeague->getCar().getFront();
+                /*originalFrontVector = globalRocketLeague->getCar().getFront();
                 angleRadians = glm::radians(-2.0f);
                 rotationQuaternion = glm::angleAxis(angleRadians, rotationAxis);
                 rotatedFrontVector = glm::rotate(rotationQuaternion, originalFrontVector);
-                globalRocketLeague->getCar().setFront(rotatedFrontVector);
+                globalRocketLeague->getCar().setFront(rotatedFrontVector);*/
                 return;
             case GLFW_KEY_RIGHT:
-                originalFrontVector = globalRocketLeague->getCar().getFront();
+                /*originalFrontVector = globalRocketLeague->getCar().getFront();
                 angleRadians = glm::radians(2.0f);
                 rotationQuaternion = glm::angleAxis(angleRadians, rotationAxis);
                 rotatedFrontVector = glm::rotate(rotationQuaternion, originalFrontVector);
-                globalRocketLeague->getCar().setFront(rotatedFrontVector);
+                globalRocketLeague->getCar().setFront(rotatedFrontVector);*/
                 return;
             default:
                 return;
