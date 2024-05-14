@@ -14,6 +14,7 @@ extern glm::vec3 cameraMovement;
 extern PhysicsEngine* physicsEnginePointer;
 
 OBBCollider cubeCollider{glm::vec3{0.4f, 0.2f, 0.8f}};
+//CapsuleCollider cubeCollider(0.8f, 0.6f);
 
 glm::vec3 mouv = glm::vec3(0.,0.,0.);
 
@@ -65,7 +66,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                     tree,
                     &cubeCollider,
                     1.0f,
-                    PhysicsMaterial{0.0f, 0.5f, 0.0f, 0.0f},
+                    PhysicsMaterial{0.5f, 0.5f, 0.0f, 0.0f},
                     0,
                     false,
                     scene->getCamera().getPosition(),

@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
         arenaTree->addChild({{}, glm::identity<glm::quat>(), {16.0f, 1.0f, 16.0f}})->addObject(&earthMesh),
         &planeCollider,
         -1.0f,
-        PhysicsMaterial{0.0f, 0.0f, 0.0f, 0.0f},
+        PhysicsMaterial{0.5f, 0.0f, 0.0f, 0.0f},
         0,
         true,
         glm::vec3{2.0f, 0.0f, 0.0f},
@@ -237,6 +237,19 @@ int main(int argc, char** argv) {
         glm::angleAxis(glm::radians(90.0f), glm::vec3{1.0f, 0.0f, 0.0f})
     )};
     physicsEngine.addRigidBody(wall4);*/
+
+    std::vector<glm::vec3> verts{
+        glm::vec3(-1.0f, 0.05f, 0.05f),
+        glm::vec3(-1.0f, 0.05f, -0.05f),
+        glm::vec3(-1.0f, -0.05f, 0.05f),
+        glm::vec3(-1.0f, -0.05f, -0.05f),
+        glm::vec3(1.0f, 0.0f, 0.0f)
+        //glm::vec3(-1.87f, 0.11f, 2.3f),
+        //glm::vec3(-0.96f, -2.15f, 1.21f),
+        //glm::vec3(1.47f, -1.94f, 2.55f),
+        //glm::vec3(-0.64f, 1.64f, 1.0f)
+    };
+    std::cout << glm::to_string(geometry::convexSetAverage(verts));
 
     double lastTime{std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::system_clock::now().time_since_epoch()).count()};
     while (!glfwWindowShouldClose(window)) {

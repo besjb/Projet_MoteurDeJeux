@@ -82,6 +82,7 @@ public:
 
     geometry::DiscreteIntersectionInfo getCollisionInfoOBB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const OBBCollider* collider, bool continuous) const override;
     geometry::DiscreteIntersectionInfo getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const override;
+    geometry::DiscreteIntersectionInfo getCollisionInfoCapsule(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const CapsuleCollider* collider, bool continuous) const override;
     geometry::DiscreteIntersectionInfo getCollisionInfoConvex(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const ConvexCollider* collider, bool continuous) const override;
 
     geometry::BoundingBox getBoundingBox(const glm::vec3& position, const glm::quat& rotation) const override;
@@ -124,7 +125,10 @@ public:
 
     float getVolume() const override;
 
+    geometry::DiscreteIntersectionInfo getCollisionInfoOBB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const OBBCollider* collider, bool continuous) const override;
     geometry::DiscreteIntersectionInfo getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const override;
+    geometry::DiscreteIntersectionInfo getCollisionInfoCapsule(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const CapsuleCollider* collider, bool continuous) const override;
+    geometry::DiscreteIntersectionInfo getCollisionInfoConvex(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const ConvexCollider* collider, bool continuous) const override;
 
     geometry::BoundingBox getBoundingBox(const glm::vec3& position, const glm::quat& rotation) const override;
 
@@ -145,6 +149,7 @@ public:
 
     geometry::DiscreteIntersectionInfo getCollisionInfoOBB(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const OBBCollider* collider, bool continuous) const override;
     geometry::DiscreteIntersectionInfo getCollisionInfoSphere(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const SphereCollider* collider, bool continuous) const override;
+    geometry::DiscreteIntersectionInfo getCollisionInfoCapsule(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const CapsuleCollider* collider, bool continuous) const override;
     geometry::DiscreteIntersectionInfo getCollisionInfoConvex(const glm::vec3& position, const glm::vec3& positionOther, const glm::quat& rotation, const glm::quat& rotationOther, const ConvexCollider* collider, bool continuous) const override;
 
     geometry::BoundingBox getBoundingBox(const glm::vec3& position, const glm::quat& rotation) const override;
@@ -267,7 +272,7 @@ public:
     RigidBody& applyImpulse(const glm::vec3& impulsePosition, const glm::mat3& inverseInertia, const glm::vec3& impulse);
 
     bool isStatic() const {return staticBody;}
-    bool canRotate() const {return !fixedRotation;}
+    bool canRotate() const {return !(fixedRotation || staticBody);}
 
 private:
 
