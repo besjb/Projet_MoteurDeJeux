@@ -106,7 +106,7 @@ void RocketLeague::init(float screenRatio) {
     initModels();
 
     scene.getRootTransformTree()
-        ->addChild(Transform().setScale(glm::vec3(20.0f)))
+        ->addChild(Transform().setTranslation({0.0f, -0.45f, 0.0f}).setScale(glm::vec3(20.0f)))
         ->addObject(arenaModel);
 
     car.getTransformTree()
@@ -116,7 +116,8 @@ void RocketLeague::init(float screenRatio) {
         .setMass(10.0f)
         .setPosition({0.0f, 5.0f, 0.0f});
 
-    addBall();
+    addBall()
+        .setPosition({0.0f, 6.0f, 0.0f});
 }
 
 void RocketLeague::destroy() {

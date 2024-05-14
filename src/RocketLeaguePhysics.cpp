@@ -1,4 +1,5 @@
 #include "RocketLeaguePhysics.hpp"
+#include <iostream>
 
 float sign(float value) {
     if (value > 0.0f) {
@@ -77,16 +78,44 @@ std::optional<Intersection> collideBallArena(const glm::vec3& ballPositionStart,
 
     const float a = std::abs(arenaLength - radius);
     if (std::abs(ballPositionStart.x) < std::abs(a) && std::abs(a) < std::abs(ballPositionEnd.x)) {
-
+        const float tp{(a - std::abs(ballPositionStart.x)) / std::abs(ballPositionEnd.x - ballPositionStart.x)};
+        if (tp < t) {
+            t = tp;
+            collisionPoint = ballPositionStart + (ballPositionEnd - ballPositionStart) * t;
+            normal = glm::vec3{collisionPoint.x > 0.0f ? -1.0f : 1.0f, 0.0f, 0.0f};
+        }
     }
 
     const float b = std::abs(arenaWidth - radius);
-    if (std::abs(ballPositionStart.z) < std::abs(b) && std::abs(b) < std::abs(ballPositionEnd.z)) {
-
+    if (std::abs(ballPositionStart.z) < std::abs(a) && std::abs(a) < std::abs(ballPositionEnd.z)) {
+        const float tp{(b - std::abs(ballPositionStart.z)) / std::abs(ballPositionEnd.z - ballPositionStart.z)};
+        if (tp < t) {
+            t = tp;
+            collisionPoint = ballPositionStart + (ballPositionEnd - ballPositionStart) * t;
+            normal = glm::vec3{0.0f, 0.0f, collisionPoint.x > 0.0f ? -1.0f : 1.0f};
+        }
     }
 
+    /*const float c = std::abs(arenaHeight - radius);
+    const float centeredStartY{ballPositionStart.y + arenaHeight * 0.5f};
+    const float centeredEndY{ballPositionEnd.y + arenaHeight * 0.5f};
+    std::cout << centeredStartY <<' ' << centeredEndY <<'\n';
+    if (std::abs(centeredStartY) < std::abs(c) && std::abs(c) < std::abs(centeredEndY)) {
+        const float tp{(c - std::abs(centeredStartY)) / std::abs(centeredEndY - centeredStartY)};
+        if (tp < t) {
+            t = tp;
+            collisionPoint = ballPositionStart + (ballPositionEnd - ballPositionStart) * t;
+            normal = glm::vec3{0.0f, collisionPoint.y + arenaHeight * 0.5f > 0.0f ? -1.0f : 1.0f, 0.0f};
+        }
+    }*/
+
+    /*const float b = std::abs(arenaWidth - radius);
+    if (std::abs(ballPositionStart.z) < std::abs(b) && std::abs(b) < std::abs(ballPositionEnd.z)) {
+
+    }*/
+
     if (ballPositionStart.y != ballPositionEnd.y && ballPositionStart.y >= radius && radius >= ballPositionEnd.y) {
-        const float tp{std::abs(ballPositionStart.y / (ballPositionEnd - ballPositionStart).y)};
+        const float tp{(radius - std::abs(ballPositionStart.y)) / (ballPositionEnd.y - ballPositionStart.y)};
         if (tp < t) {
             t = tp;
             collisionPoint = ballPositionStart + (ballPositionEnd - ballPositionStart) * t;

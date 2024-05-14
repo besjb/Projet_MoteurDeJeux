@@ -1,5 +1,6 @@
 #include "Ball.hpp"
 #include "RocketLeague.hpp"
+#include "RocketLeaguePhysics.hpp"
 
 extern RocketLeague* globalRocketLeague;
 
@@ -42,8 +43,32 @@ glm::vec3 Ball::getVelocity() const {
 }
 
 void Ball::updatePhysics(float delta) {
-    position += velocity * delta;
     velocity += globalRocketLeague->getGravity() * delta;
+
+    const float velocityLength{glm::length(velocity)};
+    if (velocityLength > 15.0f) {
+        velocity *= 15.0f / velocityLength;
+    }
+    glm::vec3 nextPosition{position + velocity * delta};
+
+    bool intersects{true};
+    std::size_t i{};
+    while (intersects && position != nextPosition && i < 10) {
+        std::optional<Intersection> intersectionOpt{collideBallArena(position, nextPosition, 0.45f)};
+        intersects = intersectionOpt.has_value();
+        if (intersects) {
+            Intersection intersection{intersectionOpt.value()};
+            position += velocity * intersection.t * delta;
+            const float normalVelocity = glm::dot(velocity, intersection.normal);
+
+            const float jn = -(1.0f + 0.4f) * normalVelocity;
+            velocity += jn * intersection.normal;
+            delta *= (1.0f - intersection.t);
+            nextPosition = position + velocity * delta;
+            ++i;
+        }
+    }
+    position = nextPosition;
 
     transformTree->transform.setTranslation(position);
 }

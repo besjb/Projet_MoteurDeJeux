@@ -122,7 +122,7 @@ void Car::startJump() {
 
 void Car::stopJump() {
     jumpTime = -1.0f;
-    doubleJumpTime = 2.0f;
+    doubleJumpTime = 1.5f;
 }
 
 bool Car::isJumping() const {
@@ -140,8 +140,11 @@ void Car::doubleJump() {
 
 void Car::updateAnimations(float delta) {
     if (jumpTime > 0.0f) {
-        velocity += 50.0f * getUpVector() * delta;
+        velocity += 40.0f * getUpVector() * delta;
         jumpTime -= delta;
+        if (jumpTime <= 0.0f) {
+            stopJump();
+        }
     }
     if (doubleJumpTime > 0.0f) {
         doubleJumpTime -= delta;
