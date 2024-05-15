@@ -83,6 +83,7 @@ private:
     glm::vec3 position;
     glm::quat rotation;
     glm::vec3 velocity;
+    glm::vec3 centrifuge;
     glm::vec3 angularVelocity;
     glm::vec3 movementAngle;
 
