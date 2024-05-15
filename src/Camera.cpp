@@ -1,4 +1,5 @@
 #include "Camera.hpp"
+#include <glm/gtx/vector_angle.hpp>
 
 #include <iostream>
 
@@ -109,8 +110,6 @@ glm::mat4 Camera::getViewProjectionMatrix() const {
 }*/
 
 void Camera::update(const glm::vec3& carPosition, const glm::quat& carRotation) {
-
-    std::cout << getFov() << std::endl;
     glm::vec3 offset = glm::vec3(-5.0f, 1.5f, 0.0f);
 
     float carYaw = atan2(2.0f * (carRotation.y * carRotation.w + carRotation.x * carRotation.z),
@@ -136,47 +135,23 @@ void Camera::update(const glm::vec3& carPosition, const glm::quat& carRotation) 
     setRotation(newRotation);
 }
 
+void Camera::updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPosition) {
+    glm::vec3 offset = glm::vec3(-5.0f, 0.0f, 0.0f);
+    glm::vec3 offsetHauteur = glm::vec3(0.0f, 1.0f, 0.0f);
 
-void Camera::updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPosition, const glm::quat& carRotation) {
-    glm::vec3 offset = glm::vec3(-3.0f, 1.0f, 0.0f);
+    glm::vec3 axisToBallCar = glm::normalize(ballPosition - carPosition);
 
-    glm::vec3 directionToBallFromCar = glm::normalize(ballPosition - carPosition);
-    
-    glm::vec3 offsetDirectionToBallFromCar = directionToBallFromCar + offset;
-    
-    glm::vec3 rotatedDirectionToBallFromCar = glm::rotate(carRotation, offsetDirectionToBallFromCar);
+    glm::vec3 newCameraPosition = carPosition - axisToBallCar * glm::length(offset) + offsetHauteur;
 
-    glm::vec3 cameraPosition = carPosition + offsetDirectionToBallFromCar;
-    
-    glm::vec3 directionToBall = glm::normalize(ballPosition - cameraPosition);
-    
-    glm::quat newRotation = glm::quatLookAt(directionToBall, glm::vec3(0.,1.,0.));
-    
+    glm::vec3 directionToBall = glm::normalize(ballPosition - newCameraPosition);
+
+    glm::quat newRotation = glm::quatLookAt(directionToBall, glm::vec3(0.0f, 1.0f, 0.0f));
+
+    setPosition(newCameraPosition);
     setRotation(glm::inverse(newRotation));
-    setPosition(cameraPosition);
 }
 
-/*void Camera::updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPosition) {
-    glm::vec3 offset = glm::vec3(-4.0f, 0.0f, 0.0f);
 
-    // Calculate direction from car to ball
-    glm::vec3 directionToBallFromCar = glm::normalize(ballPosition - carPosition);
-
-    // Apply offset from car along the direction to the ball
-    glm::vec3 cameraPosition = (directionToBallFromCar * offset) + glm::vec3(0.0f, 1.0f, 0.0f);
-
-    // Calculate the rotation needed for camera alignment
-    glm::vec3 rotationAxis = glm::vec3(0.0f, 1.0f, 0.0f);
-    float rotationAngle = glm::acos(glm::dot(glm::vec3(0.0f, 1.0f, 0.0f), directionToBallFromCar));
-    glm::quat rotationQuat = glm::angleAxis(rotationAngle, rotationAxis);
-
-    // Calculate the new rotation for the camera to look at the ball
-    glm::quat newRotation = glm::quatLookAt(directionToBallFromCar, glm::vec3(0.0f, 1.0f, 0.0f));
-
-    // Set the rotation and position of the camera
-    setRotation(glm::inverse(newRotation * rotationQuat)); // Inverse the rotation to match the camera's rotation
-    setPosition(cameraPosition);
-}*/
 
 void Camera::fovEffectBoosting(bool isTurboBoosting){
     if(isTurboBoosting){
@@ -184,6 +159,6 @@ void Camera::fovEffectBoosting(bool isTurboBoosting){
             setFov(getFov() + 0.25);
     }else{
         if(getFov() > 60)
-            setFov(getFov() - 0.25);
+            setFov(getFov() - 0.125);
     }
 }
