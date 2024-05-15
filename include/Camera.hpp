@@ -57,6 +57,8 @@ public:
 
     void update(const glm::vec3& targetPosition, const glm::quat& carRotation);
 
+    void updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPosition, const glm::quat& carRotation);
+
 private:
     
     glm::vec3 position;

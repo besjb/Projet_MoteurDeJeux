@@ -106,6 +106,33 @@ void Camera::update(const glm::vec3& carPosition, const glm::quat& carRotation) 
     setRotation(newRotation);
 }
 
+void Camera::updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPosition, const glm::quat& carRotation) {
+    glm::vec3 offset = glm::vec3(-3.0f, 1.0f, 0.0f);
+
+    glm::vec3 directionToBallFromCar = glm::normalize(ballPosition - carPosition);
+    
+    // Apply offset to the direction vector
+    glm::vec3 offsetDirectionToBallFromCar = directionToBallFromCar + offset;
+    
+    // Rotate the direction vector to align with the car's orientation
+    glm::vec3 rotatedDirectionToBallFromCar = glm::rotate(carRotation, offsetDirectionToBallFromCar);
+    
+    // Calculate the camera position by adding the rotated direction to the car's position
+    glm::vec3 cameraPosition = carPosition + offsetDirectionToBallFromCar;
+    
+    glm::vec3 directionToBall = glm::normalize(ballPosition - cameraPosition);
+    
+    glm::quat newRotation = glm::quatLookAt(directionToBall, glm::vec3(0.,1.,0.));
+    
+    setRotation(glm::inverse(newRotation));
+    setPosition(cameraPosition);
+}
+
+
+
+
+
+
 
 
 

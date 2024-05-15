@@ -43,6 +43,7 @@ bool impulseModel{false};
 RocketLeague* globalRocketLeague;
 
 bool captureMouse{false};
+bool switchCamera{false}; // false = car camera / true = ball camera
 
 void cursorCallback(GLFWwindow* window, double x, double y) {
     if (!captureMouse) {

@@ -10,6 +10,7 @@
 extern bool captureMouse;
 extern Mesh* globalCarMesh;
 extern glm::vec3 cameraMovement;
+extern bool switchCamera;
 
 extern RocketLeague* globalRocketLeague;
 
@@ -72,6 +73,9 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 return;
             case GLFW_KEY_RIGHT:
                 //moveLeftCamera();
+                return;
+            case GLFW_KEY_SPACE:
+                switchCamera = !switchCamera;
                 return;
             case GLFW_KEY_LEFT_CONTROL:
                 if (captureMouse) {
