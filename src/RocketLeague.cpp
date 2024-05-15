@@ -70,14 +70,14 @@ void RocketLeague::initModels() {
 
     arenaMaterial = new MeshMaterial{
         &meshShaderProgram,
-        loadTexture("textures/solar/earth.jpg"),
+        loadTexture("models/arena.png"),
         {0.15f, 0.15f, 0.15f},
         {1.0f, 1.0f, 1.0f},
         {0.3f, 0.3f, 0.3f},
         16.0f
     };
 
-    arenaModel = new Mesh{Mesh::loadFromFile("./models/arena3.obj", arenaMaterial)};
+    arenaModel = new Mesh{Mesh::loadFromFile("./models/arena0.obj", arenaMaterial)};
 
     ballMaterial = new MeshMaterial{
         &meshShaderProgram,
