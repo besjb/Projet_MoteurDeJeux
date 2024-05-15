@@ -54,7 +54,7 @@ void Ball::updatePhysics(float delta) {
     //glm::vec3 nextPosition{position + velocity * delta};
 
     bool intersects{true};
-    std::optional<Intersection> intersectionOpt{collideBallArena(position, 0.45f)};
+    std::optional<Intersection> intersectionOpt{collideBallArena(position, 0.75f)};
     intersects = intersectionOpt.has_value();
     if (intersects) {
         Intersection intersection{intersectionOpt.value()};

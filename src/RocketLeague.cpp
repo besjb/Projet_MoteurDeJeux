@@ -31,9 +31,13 @@ void RocketLeague::update(float delta) {
 
 Ball& RocketLeague::addBall() {
     return balls.emplace_back(scene.getRootTransformTree()
-        ->addChild(Transform().setScale(glm::vec3(0.005F)))
+        ->addChild(Transform().setScale(glm::vec3(0.008F)))
         ->addObject(ballModel)
     );
+}
+
+std::vector<Ball>& RocketLeague::getBalls() {
+    return balls;
 }
 
 void RocketLeague::render() {
@@ -137,7 +141,7 @@ void RocketLeague::init(float screenRatio) {
         .setPosition({0.0f, 5.0f, 0.0f});
 
     addBall()
-        .setPosition({0.0f, 6.0f, 0.0f});
+        .setPosition({0.0f, 10.0f, 0.0f});
 }
 
 void RocketLeague::destroy() {

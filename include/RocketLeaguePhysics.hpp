@@ -26,7 +26,7 @@ constexpr std::array<glm::vec3, 9> carHitbox{
     glm::vec3{-0.55f, 0.0f, -0.3f}
 };
 
-constexpr std::array<glm::vec3, 9> carHitboxTriangles{
+/*constexpr std::array<std::array<glm::vec3, 3>> carHitboxTriangles{
     glm::vec3{-0.0f, 0.5f, 0.0f},
     glm::vec3{-0.6f, 0.55f, 0.3f},
     glm::vec3{-0.6f, 0.55f, -0.3f},
@@ -36,13 +36,13 @@ constexpr std::array<glm::vec3, 9> carHitboxTriangles{
     glm::vec3{0.55f, 0.0f, -0.3f},
     glm::vec3{-0.5f, 0.0f, 0.3f},
     glm::vec3{-0.5f, 0.0f, -0.3f}
-};
+};*/
 
 constexpr float arenaLength{150.0f};
 constexpr float arenaWidth{120.0f};
 constexpr float arenaHeight{26.0f};
-constexpr float arenaWallSideSize{};
-constexpr float arenaWallCornerRadius{};
+constexpr float arenaWallSideSize{16.0f};
+constexpr float arenaWallCornerRadius{8.0f};
 constexpr float arenaGroundCornerRadius{};
 constexpr float arenaCeilingCornerRadius{};
 constexpr float arenaGoalLength{};
@@ -56,6 +56,6 @@ const float invSqrt5{1.0f / std::sqrt(5.0f)};
 
 std::optional<Intersection> collideCarArena(const glm::vec3& carPosition, const glm::quat& carRotation);
 
-std::optional<Intersection> collideCarBall();
+std::optional<Intersection> collideCarBall(const glm::vec3& carPosition, const glm::quat& carRotation, const glm::vec3& ballPosition, float ballRadius);
 
 std::optional<Intersection> collideBallArena(const glm::vec3& ballPosition, float radius);

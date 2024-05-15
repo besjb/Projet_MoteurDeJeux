@@ -22,6 +22,8 @@ public:
 
     Ball& addBall();
 
+    std::vector<Ball>& getBalls();
+
     void render();
 
     Scene& getScene();

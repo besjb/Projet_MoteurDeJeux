@@ -110,7 +110,7 @@ glm::mat4 Camera::getViewProjectionMatrix() const {
 
 void Camera::update(const glm::vec3& carPosition, const glm::quat& carRotation) {
 
-    std::cout << getFov() << std::endl;
+    //std::cout << getFov() << std::endl;
     glm::vec3 offset = glm::vec3(-5.0f, 1.5f, 0.0f);
 
     float carYaw = atan2(2.0f * (carRotation.y * carRotation.w + carRotation.x * carRotation.z),
