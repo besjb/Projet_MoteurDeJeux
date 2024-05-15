@@ -122,7 +122,7 @@ void RocketLeague::init(float screenRatio) {
     initModels();
 
     scene.getRootTransformTree()
-        ->addChild(Transform().setScale(glm::vec3(1.5f)))
+        ->addChild(Transform().setScale(glm::vec3(2.0f)))
             ->addObject(arenaModel)
             ->getParent()
         ->addChild(Transform().setTranslation(glm::vec3(0.0f, 1000.0f, 0.0f)).setScale(glm::vec3(0.001f)))
