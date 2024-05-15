@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
 
     glfwSetWindowUserPointer(window, &rocketLeague.getScene());
 
-    initImgui(window);
+    //initImgui(window);
 
     /*ShaderProgram meshShaderProgram;
     Shader vertexShader{"./shaders/mesh/phong.vert", Shader::Type::VERTEX};
@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
         rocketLeague.update(deltaT);
         rocketLeague.render();
 
-        ImGui_ImplOpenGL3_NewFrame();
+        /*ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
@@ -168,16 +168,16 @@ int main(int argc, char** argv) {
         ImGui::End();
 
         ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());*/
 
         glfwSwapBuffers(window);
 
         lastTime = currentTime;
     }
 
-    ImGui_ImplOpenGL3_Shutdown();
+    /*ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    ImGui::DestroyContext();*/
 
     glfwTerminate();
     //meshShaderProgram.destroy();
