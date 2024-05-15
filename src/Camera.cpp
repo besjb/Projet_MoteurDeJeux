@@ -1,5 +1,7 @@
 #include "Camera.hpp"
 
+#include <iostream>
+
 Camera::Camera(
     const glm::vec3& position,
     const glm::quat& rotation,
@@ -107,6 +109,8 @@ glm::mat4 Camera::getViewProjectionMatrix() const {
 }*/
 
 void Camera::update(const glm::vec3& carPosition, const glm::quat& carRotation) {
+
+    std::cout << getFov() << std::endl;
     glm::vec3 offset = glm::vec3(-5.0f, 1.5f, 0.0f);
 
     float carYaw = atan2(2.0f * (carRotation.y * carRotation.w + carRotation.x * carRotation.z),
@@ -134,7 +138,7 @@ void Camera::update(const glm::vec3& carPosition, const glm::quat& carRotation) 
 
 
 void Camera::updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPosition, const glm::quat& carRotation) {
-    glm::vec3 offset = glm::vec3(-4.0f, 1.0f, 0.0f);
+    glm::vec3 offset = glm::vec3(-3.0f, 1.0f, 0.0f);
 
     glm::vec3 directionToBallFromCar = glm::normalize(ballPosition - carPosition);
     
@@ -174,3 +178,12 @@ void Camera::updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPo
     setPosition(cameraPosition);
 }*/
 
+void Camera::fovEffectBoosting(bool isTurboBoosting){
+    if(isTurboBoosting){
+        if(getFov() < 65)
+            setFov(getFov() + 0.25);
+    }else{
+        if(getFov() > 60)
+            setFov(getFov() - 0.25);
+    }
+}
