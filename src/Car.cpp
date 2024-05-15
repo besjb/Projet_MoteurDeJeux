@@ -150,12 +150,12 @@ bool Car::canDoubleJump() const {
 
 void Car::doubleJump() {
     doubleJumpTime = -1.0f;
-    velocity += 2.0f * getUpVector();
+    velocity += 4.5f * getUpVector();
 }
 
 void Car::updateAnimations(float delta) {
     if (jumpTime > 0.0f) {
-        velocity += 40.0f * getUpVector() * delta;
+        velocity += 45.0f * getUpVector() * delta;
         jumpTime -= delta;
         if (jumpTime <= 0.0f) {
             stopJump();
@@ -191,7 +191,7 @@ void Car::updatePhysics(float delta) {
             velocity -= delta * sign(frontSpeed) * getFrontVector() * std::max(1.0f, std::abs(glm::dot(getFrontVector(), velocity)));
         }
 
-        velocity -= side * glm::dot(side, velocity);
+        velocity -= std::min(10.0f * delta, 1.0f) * side * glm::dot(side, velocity);
     }
     else {
         rotation = rotation * glm::quat(delta * movementAngle);
@@ -203,12 +203,57 @@ void Car::updatePhysics(float delta) {
 
     /*glm::quat nextRotation{glm::quat{delta * angularVelocity} * rotation * glm::quat(delta * movementAngle)}*/;
 
-    glm::vec3 nextPosition{position + velocity * delta};
+    position += velocity * delta;
+    //glm::vec3 nextPosition{position + velocity * delta};
 
     bool intersects{true};
     std::size_t i{};
     doWheelsCollide = false;
-    while (intersects && position != nextPosition && i < 10) {
+
+    //constexpr glm::vec3 carWheelsCenter{0.025f, 0.0f, 0.0f};
+    while (intersects && i < 10) {
+        std::optional<Intersection> intersectionOpt{collideCarArena(position, rotation)};
+        intersects = intersectionOpt.has_value();
+        if (intersects) {
+            Intersection intersection{intersectionOpt.value()};
+            position += intersection.normal * intersection.penetration;
+
+            const float normalVelocity = glm::dot(velocity, intersection.normal);
+            const glm::vec3 carUpVector{getUpVector()};
+            float replDiff{glm::dot(carUpVector, intersection.normal)};
+
+            bool wheelCollision{false};
+            if (normalVelocity <= 0.0f) {
+
+                wheelCollision = replDiff > 0.95f;
+                if (wheelCollision) {
+                    doWheelsCollide = true;
+                    doubleJumpTime = std::numeric_limits<float>::infinity();
+                }
+
+                const glm::vec3 newCollisionPoint{intersection.collisionPoint + intersection.normal * (intersection.penetration - 0.01f)};
+
+                if (replDiff > 0.0f && replDiff < 0.999f) {
+                    const glm::quat newRotation = glm::slerp(rotation, glm::quatLookAt(glm::cross(intersection.normal, glm::cross(intersection.normal, glm::cross(getFrontVector(), intersection.normal))), intersection.normal), std::min(7.0f * delta, 1.0f));
+                    const glm::quat rotDiff = newRotation * glm::conjugate(rotation);
+                    rotation = newRotation;
+                    const glm::vec3 collDiff = newCollisionPoint - position;
+                    const glm::vec3 rotatedDiff = rotDiff * collDiff;
+                    position += 0.999f * (collDiff - rotatedDiff);
+                }
+
+                //todo restitution
+                const float jn = -(1.0f + (wheelCollision ? -0.0f : 0.0f)) * normalVelocity;
+                velocity += jn * intersection.normal;
+                ++i;
+
+            }
+            rotation = glm::normalize(rotation);
+        }
+    }
+
+
+    /*while (intersects && position != nextPosition && i < 10) {
         std::optional<Intersection> intersectionOpt{collideCarArena(position, nextPosition, rotation, rotation)};
         intersects = intersectionOpt.has_value();
         if (intersects) {
@@ -229,10 +274,10 @@ void Car::updatePhysics(float delta) {
             nextPosition = position + velocity * delta;
             ++i;
         }
-    }
+    }*/
 
     //rotation = nextRotation;
-    position = nextPosition;
+    //position = nextPosition;
 
     transformTree->transform
         .setTranslation(position)
