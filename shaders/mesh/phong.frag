@@ -4,7 +4,7 @@ in vec3 position;
 in vec3 normal;
 in vec2 texCoords;
 
-out vec3 color;
+out vec4 color;
 
 uniform vec3 materialAmbient;
 uniform vec3 materialDiffuse;
@@ -35,5 +35,5 @@ void main() {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), materialShininess);
     vec3 specular = spec * materialSpecular;
 
-    color = lightColor * (ambient + diffuse + specular) * texture(meshTexture, texCoords).rgb;
+    color = vec4(lightColor * (ambient + diffuse + specular) * texture(meshTexture, texCoords).rgb, texture(meshTexture, texCoords).a);
 }

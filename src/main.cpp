@@ -105,6 +105,9 @@ int main(int argc, char** argv) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
@@ -146,9 +149,6 @@ int main(int argc, char** argv) {
 
         double currentTime{std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::system_clock::now().time_since_epoch()).count()};
         deltaT = static_cast<float>(currentTime - lastTime);
-        /*if (cameraMovement != glm::vec3{}) {
-            rocketLeague.getScene().getCamera().moveRelative(deltaT * cameraMovement);
-        }*/
         
         glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

@@ -14,7 +14,7 @@ public:
         float fov = 90,
         float aspectRatio = 16.0f / 9.0f,
         float nearClip = 0.1f,
-        float farClip = 100.0f
+        float farClip = 200.0f
     );
 
     void setAspectRatio(float aspectRatio);

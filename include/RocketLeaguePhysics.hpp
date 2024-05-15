@@ -38,9 +38,9 @@ constexpr static std::array<glm::vec3, 9> carHitboxTriangles{
     glm::vec3{-0.5f, 0.0f, -0.3f}
 };
 
-constexpr float arenaLength{20.0f};
-constexpr float arenaWidth{12.0f};
-constexpr float arenaHeight{12.0f};
+constexpr float arenaLength{80.0f};
+constexpr float arenaWidth{40.0f};
+constexpr float arenaHeight{26.0f};
 constexpr float arenaWallSideSize{};
 constexpr float arenaWallCornerRadius{};
 constexpr float arenaGroundCornerRadius{};

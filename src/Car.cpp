@@ -13,6 +13,7 @@ Car::Car(TransformTree* transformTree) :
     position{glm::vec3(0.0f)},
     rotation{glm::identity<glm::quat>()},
     velocity{glm::vec3(0.0f)},
+    centrifuge{glm::vec3(0.0f)},
     angularVelocity{glm::vec3(0.0f)},
     forwardVelocity{0.0f},
     forwardAcceleration{0.0f},
@@ -130,7 +131,8 @@ bool Car::wheelsCollide() const {
 }
 
 void Car::startJump() {
-    jumpTime = 0.1f;
+    velocity += centrifuge;
+    jumpTime = 0.15f;
 }
 
 void Car::stopJump() {
@@ -173,23 +175,30 @@ void Car::updatePhysics(float delta) {
         float frontSpeed{glm::dot(velocity, getFrontVector())};
         velocity += rotation * glm::vec3(forwardAcceleration, 0.0f, 0.0f) * delta;
         
-        float turnSpeed = std::min(std::abs(frontSpeed), 2.0f);
+        float turnSpeed = std::min(std::abs(frontSpeed * 0.25f), 2.0f);
         if (frontSpeed < 0.0f) {
             turnSpeed = -turnSpeed;
         }
+
         glm::quat turn{delta * turnSensitivity * turnSpeed * getUpVector()};
-        rotation *= turn;
+        rotation = rotation * turn;
         velocity = turn * velocity;
 
         const glm::vec3 side{glm::cross(getFrontVector(), getUpVector())};
+
+        // Décélération
+        if (forwardAcceleration == 0.0f) {
+            velocity -= delta * sign(frontSpeed) * getFrontVector() * std::max(1.0f, std::abs(glm::dot(getFrontVector(), velocity)));
+        }
+
         velocity -= side * glm::dot(side, velocity);
     }
     else {
-        //rotation = rotation * glm::quat(delta * movementAngle);
+        rotation = rotation * glm::quat(delta * movementAngle);
     }
     
-    if (velocityLength > 10.0f) {
-        velocity *= 10.0f / velocityLength;
+    if (velocityLength > 20.0f) {
+        velocity *= 20.0f / velocityLength;
     }
 
     /*glm::quat nextRotation{glm::quat{delta * angularVelocity} * rotation * glm::quat(delta * movementAngle)}*/;

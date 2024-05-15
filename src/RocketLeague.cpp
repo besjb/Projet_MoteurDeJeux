@@ -71,14 +71,14 @@ void RocketLeague::initModels() {
 
     arenaMaterial = new MeshMaterial{
         &meshShaderProgram,
-        loadTexture("textures/solar/earth.jpg"),
+        loadTexture("models/arena.png"),
         {0.15f, 0.15f, 0.15f},
         {1.0f, 1.0f, 1.0f},
         {0.3f, 0.3f, 0.3f},
         16.0f
     };
 
-    arenaModel = new Mesh{Mesh::loadFromFile("./models/arena.obj", arenaMaterial)};
+    arenaModel = new Mesh{Mesh::loadFromFile("./models/arena0.obj", arenaMaterial)};
 
     ballMaterial = new MeshMaterial{
         &meshShaderProgram,
@@ -108,7 +108,7 @@ void RocketLeague::init(float screenRatio) {
     initModels();
 
     scene.getRootTransformTree()
-        ->addChild(Transform().setTranslation({0.0f, -0.45f, 0.0f}).setScale(glm::vec3(20.0f)))
+        ->addChild(Transform().setScale(glm::vec3(1.5f)))
         ->addObject(arenaModel);
 
     car.getTransformTree()

@@ -54,6 +54,6 @@ private:
 
     std::vector<Ball> balls;
 
-    static constexpr glm::vec3 gravity{0.0f, -5.5f, 0.0f};
+    static constexpr glm::vec3 gravity{0.0f, -7.5f, 0.0f};
 
 };
