@@ -57,6 +57,16 @@ void RocketLeague::initModels() {
     meshShaderProgram.attachShader(fragmentShader);
     meshShaderProgram.link();
 
+    skyboxMaterial = new MeshMaterial{
+        &meshShaderProgram,
+        loadTexture("textures/savanna_digital.jpg"),
+        {1.0f, 1.0f, 1.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+    };
+
+    skyboxModel = new Mesh{Mesh::loadFromFile("./models/basic_skybox_3d.obj", skyboxMaterial)};
+
     carMaterial = new MeshMaterial{
         &meshShaderProgram,
         loadTexture("models/octane-rocket-league-car/textures/Octane_Chasis_Map.png"),
@@ -108,7 +118,10 @@ void RocketLeague::init(float screenRatio) {
 
     scene.getRootTransformTree()
         ->addChild(Transform().setScale(glm::vec3(1.5f)))
-        ->addObject(arenaModel);
+            ->addObject(arenaModel)
+            ->getParent()
+        ->addChild(Transform().setScale(glm::vec3(0.001f)))
+            ->addObject(skyboxModel);
 
     car.getTransformTree()
         ->addObject(carModel);
@@ -122,9 +135,12 @@ void RocketLeague::init(float screenRatio) {
 }
 
 void RocketLeague::destroy() {
+    delete skyboxMaterial;
     delete carMaterial;
     delete arenaMaterial;
     delete ballMaterial;
+
+    delete skyboxMaterial;
     delete carModel;
     delete arenaModel;
     delete ballModel;

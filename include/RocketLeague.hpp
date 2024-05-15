@@ -32,10 +32,12 @@ private:
 
     ShaderProgram meshShaderProgram;
 
+    MeshMaterial* skyboxMaterial;
     MeshMaterial* carMaterial;
     MeshMaterial* arenaMaterial;
     MeshMaterial* ballMaterial;
 
+    Mesh* skyboxModel;
     Mesh* carModel;
     Mesh* arenaModel;
     Mesh* ballModel;
