@@ -24,7 +24,7 @@ void RocketLeague::update(float delta) {
     if(!switchCamera)
         scene.getCamera().update(car.getPosition(), car.getRotation());
     else
-        scene.getCamera().updateCamera2(balls[0].getPosition(), car.getPosition(), car.getRotation());
+        scene.getCamera().updateCamera2(balls[0].getPosition(), car.getPosition());
     updatePhysics(delta);
 }
 
