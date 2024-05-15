@@ -59,6 +59,8 @@ public:
 
     void updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPosition, const glm::quat& carRotation);
 
+    void fovEffectBoosting(bool isTurboBoosting);
+
 private:
     
     glm::vec3 position;
