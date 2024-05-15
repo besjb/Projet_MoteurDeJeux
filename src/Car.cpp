@@ -24,7 +24,8 @@ Car::Car(TransformTree* transformTree) :
     doubleJumpTime{0.0f},
     boosting{false},
     turboBoosting{false},
-    turboBoostCooldown{0.0f}
+    turboBoostCooldown{0.0f},
+    drifting{false}
 {}
 
 Car& Car::setMass(float mass) {
@@ -184,6 +185,18 @@ bool Car::isTurboBoosting() const {
     return turboBoosting;
 }
 
+void Car::startDrifting() {
+    drifting = true;
+}
+
+void Car::stopDrifting() {
+    drifting = false;
+}
+
+bool Car::isDrifting() {
+    return drifting;
+}
+
 void Car::updateAnimations(float delta) {
     if (jumpTime > 0.0f) {
         velocity += 45.0f * getUpVector() * delta;
@@ -224,9 +237,11 @@ void Car::updatePhysics(float delta) {
             turnSpeed = -turnSpeed;
         }
 
-        glm::quat turn{delta * turnSensitivity * turnSpeed * getUpVector()};
+        glm::quat turn{turn = delta * turnSensitivity * turnSpeed * getUpVector()};
         rotation = rotation * turn;
-        velocity = turn * velocity;
+        if (!drifting) {
+            velocity = turn * velocity;
+        }
 
         const glm::vec3 side{glm::cross(getFrontVector(), getUpVector())};
 
@@ -235,7 +250,9 @@ void Car::updatePhysics(float delta) {
             velocity -= delta * sign(frontSpeed) * getFrontVector() * std::max(1.0f, std::abs(glm::dot(getFrontVector(), velocity)));
         }
 
-        velocity -= std::min(10.0f * delta, 1.0f) * side * glm::dot(side, velocity);
+        if (!drifting) {
+            velocity -= std::min(4.0f * delta, 1.0f) * side * glm::dot(side, velocity);
+        }
     }
     else {
         if (boosting) {
@@ -294,10 +311,9 @@ void Car::updatePhysics(float delta) {
             float replDiff{glm::dot(carUpVector, intersection.normal)};
 
             bool wheelCollision{false};
-            bool frameCollision{false};
             if (normalVelocity <= 0.0f) {
 
-                frameCollision = replDiff < 0.2f;
+                bool frameCollision = replDiff < 0.2f;
 
                 wheelCollision = replDiff > 0.95f;
                 if (wheelCollision) {
@@ -320,11 +336,9 @@ void Car::updatePhysics(float delta) {
                 const glm::vec3 rotatedDiff = rotDiff * collDiff;
                 position += 0.999f * (collDiff - rotatedDiff);
 
-                //todo restitution
                 const float jn = -(1.0f + (frameCollision ? 0.3f : 0.0f)) * normalVelocity;
                 velocity += jn * intersection.normal;
                 ++i;
-
             }
             rotation = glm::normalize(rotation);
         }

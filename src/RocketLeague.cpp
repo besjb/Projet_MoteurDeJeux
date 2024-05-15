@@ -25,7 +25,7 @@ void RocketLeague::update(float delta) {
         scene.getCamera().update(car.getPosition(), car.getRotation());
     else
         scene.getCamera().updateCamera2(balls[0].getPosition(), car.getPosition(), car.getRotation());
-    if(car.isBoosting()){
+    if(car.isTurboBoosting()){
         if(scene.getCamera().getFov() < 120)
             scene.getCamera().setFov(scene.getCamera().getFov() + 1.);
     }else{
