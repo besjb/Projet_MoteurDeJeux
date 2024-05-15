@@ -40,7 +40,7 @@ std::optional<Intersection> collideCarBall(const glm::vec3& carPosition, const g
 
         if (glm::distance2(point, ballPosition) < ballRadius * ballRadius) {
 
-            const float penetration{ballRadius - glm::distance(point, ballPosition)};
+            const float penetration{std::abs(ballRadius - glm::distance(point, ballPosition))};
             if (penetration < bestIntersection.penetration) {
                 intersects = true;
                 bestIntersection.penetration = penetration;

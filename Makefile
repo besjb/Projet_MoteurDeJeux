@@ -6,11 +6,11 @@ SRC_DIR = src
 ifeq ($(OS),Windows_NT)
 	INCLUDE_DIR = -Iinclude -IC:/mingw64-new/include
 	LIB_DIR = -LC:/mingw64-new/lib
-	LIBS = -lglfw3 -lgdi32 -lopengl32 -lglew32 -limgui32
+	LIBS = -lglfw3 -lgdi32 -lopengl32 -lglew32
 else
 	INCLUDE_DIR = -Iinclude -Icommon/include
 	LIB_DIR = -Lcommon/lib
-	LIBS = -lglfw3 -lGL -lGLEW -limgui -ldl -lpthread
+	LIBS = -lglfw3 -lGL -lGLEW -ldl -lpthread
 endif
 
 OBJ_DIR = obj

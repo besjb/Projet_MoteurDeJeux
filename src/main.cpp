@@ -59,15 +59,6 @@ void cursorCallback(GLFWwindow* window, double x, double y) {
     }
 }
 
-void initImgui(GLFWwindow* window) {
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 330");
-}
-
 int main(int argc, char** argv) {
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -116,33 +107,6 @@ int main(int argc, char** argv) {
     globalRocketLeague = &rocketLeague;
 
     glfwSetWindowUserPointer(window, &rocketLeague.getScene());
-
-    //initImgui(window);
-
-    /*ShaderProgram meshShaderProgram;
-    Shader vertexShader{"./shaders/mesh/phong.vert", Shader::Type::VERTEX};
-    Shader fragmentShader{"./shaders/mesh/phong.frag", Shader::Type::FRAGMENT};
-
-    meshShaderProgram.attachShader(vertexShader);
-    meshShaderProgram.attachShader(fragmentShader);
-    meshShaderProgram.link();
-
-    auto arenaMaterial = MeshMaterial{
-        &meshShaderProgram,
-        loadTexture("textures/solar/earth.jpg"),
-        {0.15f, 0.15f, 0.15f},
-        {1.0f, 1.0f, 1.0f},
-        {0.3f, 0.3f, 0.3f},
-        16.0f
-    };
-
-    auto arenaModel = Mesh::loadFromFile("./models/sphere.obj", &arenaMaterial);
-
-    rocketLeague.getScene().getRootTransformTree()->addChild(Transform().setScale(glm::vec3(0.08f)).setTranslation(glm::vec3(-0.6f, 0.55f, 0.3f)))->addObject(&arenaModel);
-    rocketLeague.getScene().getRootTransformTree()->addChild(Transform().setScale(glm::vec3(0.08f)).setTranslation(glm::vec3(0.6f, 0.2f, 0.3f)))->addObject(&arenaModel);
-    rocketLeague.getScene().getRootTransformTree()->addChild(Transform().setScale(glm::vec3(0.08f)).setTranslation(glm::vec3(-0.0f, 0.5f, 0.0f)))->addObject(&arenaModel);
-    rocketLeague.getScene().getRootTransformTree()->addChild(Transform().setScale(glm::vec3(0.08f)).setTranslation(glm::vec3(0.6f, -0.0f, 0.3f)))->addObject(&arenaModel);
-    rocketLeague.getScene().getRootTransformTree()->addChild(Transform().setScale(glm::vec3(0.08f)).setTranslation(glm::vec3(-0.55f, -0.0f, 0.3f)))->addObject(&arenaModel);*/
 
     double lastTime{std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::system_clock::now().time_since_epoch()).count()};
     while (!glfwWindowShouldClose(window)) {

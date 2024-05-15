@@ -370,20 +370,21 @@ void Car::updatePhysics(float delta) {
         }
     }
 
-    for (Ball& ball : globalRocketLeague->getBalls()) {
+    /*for (Ball& ball : globalRocketLeague->getBalls()) {
         std::optional<Intersection> intersectionOpt{collideCarBall(position, rotation, ball.getPosition(), 0.75f)};
         intersects = intersectionOpt.has_value();
         if (intersects) {
             Intersection intersection{intersectionOpt.value()};
             //position += intersection.normal * intersection.penetration * 0.2f;
-            ball.setPosition(ball.getPosition() + intersection.normal * intersection.penetration);
+            ball.setPosition(ball.getPosition() - intersection.normal * intersection.penetration);
 
             const float normalVelocity = glm::dot(ball.getVelocity() - velocity, intersection.normal);
-            const float jn = -(1.0f + 0.4f) * normalVelocity;
+            const float jn = std::abs((1.0f + 0.4f) * normalVelocity);
+            //std::cout << jn << '\n';
             //velocity += jn * intersection.normal / mass;
-            ball.setVelocity(ball.getVelocity() + jn * intersection.normal);
+            ball.setVelocity(ball.getVelocity() - jn * intersection.normal);
         }
-    }
+    }*/
 
     transformTree->transform
         .setTranslation(position)
