@@ -132,7 +132,7 @@ void Camera::update(const glm::vec3& carPosition, const glm::quat& carRotation) 
     setRotation(newRotation);
 }
 
-/*
+
 void Camera::updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPosition, const glm::quat& carRotation) {
     glm::vec3 offset = glm::vec3(-4.0f, 1.0f, 0.0f);
 
@@ -150,9 +150,9 @@ void Camera::updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPo
     
     setRotation(glm::inverse(newRotation));
     setPosition(cameraPosition);
-}*/
+}
 
-void Camera::updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPosition) {
+/*void Camera::updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPosition) {
     glm::vec3 offset = glm::vec3(-4.0f, 0.0f, 0.0f);
 
     // Calculate direction from car to ball
@@ -172,5 +172,5 @@ void Camera::updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPo
     // Set the rotation and position of the camera
     setRotation(glm::inverse(newRotation * rotationQuat)); // Inverse the rotation to match the camera's rotation
     setPosition(cameraPosition);
-}
+}*/
 
