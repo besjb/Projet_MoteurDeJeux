@@ -3,6 +3,8 @@
 #include "MeshMaterial.hpp"
 #include "RocketLeaguePhysics.hpp"
 
+#include <algorithm>
+
 #include <glm/gtx/string_cast.hpp>
 
 extern RocketLeague* globalRocketLeague;
@@ -22,6 +24,7 @@ Car::Car(TransformTree* transformTree) :
     doWheelsCollide{false},
     jumpTime{0.0f},
     doubleJumpTime{0.0f},
+    directionalDoubleJumpTime{0.0f},
     boosting{false},
     turboBoosting{false},
     turboBoostCooldown{0.0f},
@@ -163,7 +166,18 @@ bool Car::canDoubleJump() const {
 
 void Car::doubleJump() {
     doubleJumpTime = -1.0f;
-    velocity += 4.5f * getUpVector();
+    if (movementAcceleration != glm::vec3(0.0f)) {
+        velocity.y = 0.0f;
+        directionalDoubleJumpTime = 0.55f;
+        glm::vec3 r{std::clamp(movementAcceleration.x - movementAcceleration.y, -14.0f, 14.0f), 0.0f, movementAcceleration.z};
+        r = glm::normalize(r) * 14.0f;
+        const glm::vec3 d{-0.25f * movementAcceleration.z, 0.0f, std::clamp(- movementAcceleration.y + movementAcceleration.x, -3.5f, 3.5f)};
+        velocity += rotation * d;
+        movementAngle = 0.65f * r;
+    }
+    else {        
+        velocity += 4.5f * getUpVector();
+    }
 }
 
 void Car::startBoost() {
@@ -214,14 +228,20 @@ void Car::updateAnimations(float delta) {
             turboBoosting = false;
         }
     }
+    if (directionalDoubleJumpTime > 0.0f) {
+        directionalDoubleJumpTime -= delta;
+    }
 }
 
 void Car::updatePhysics(float delta) {
-    velocity += globalRocketLeague->getGravity() * delta;
+    if (directionalDoubleJumpTime <= 0.0f) {
+        velocity += globalRocketLeague->getGravity() * delta;
+    }
 
     rotation = glm::quat{delta * angularVelocity} * rotation;
     const float velocityLength{glm::length(velocity)};
     if (doWheelsCollide) {
+        directionalDoubleJumpTime = -1.0f;
         movementAngle = glm::vec3(0.0f);
 
         float frontSpeed{glm::dot(velocity, getFrontVector())};
@@ -253,16 +273,21 @@ void Car::updatePhysics(float delta) {
         if (!drifting) {
             velocity -= std::min(4.0f * delta, 1.0f) * side * glm::dot(side, velocity);
         }
+        else {
+            velocity -= std::min(0.5f * delta, 1.0f) * side * glm::dot(side, velocity);
+        }
     }
     else {
         if (boosting) {
             velocity += rotation * glm::vec3(24.0f, 0.0f, 0.0f) * delta;
         }
-        movementAngle += movementAcceleration * delta;
-        movementAngle = glm::clamp(movementAngle, -4.5f, 4.5f);
-        for (int i{}; i < 3; ++i) {
-            if (movementAngle[i] != 0.0f && movementAcceleration[i] == 0.0f) {
-                movementAngle[i] *= 1.0f - std::min(1.0f, 4.0f * delta);
+        if (directionalDoubleJumpTime <= 0.0f) {
+            movementAngle += movementAcceleration * delta;
+            movementAngle = glm::clamp(movementAngle, -4.5f, 4.5f);
+            for (int i{}; i < 3; ++i) {
+                if (movementAngle[i] != 0.0f && movementAcceleration[i] == 0.0f) {
+                    movementAngle[i] *= 1.0f - std::min(1.0f, 4.0f * delta);
+                }
             }
         }
         rotation = rotation * glm::quat(delta * movementAngle);
@@ -317,6 +342,7 @@ void Car::updatePhysics(float delta) {
 
                 wheelCollision = replDiff > 0.95f;
                 if (wheelCollision) {
+                    directionalDoubleJumpTime = -1.0f;
                     doWheelsCollide = true;
                     doubleJumpTime = std::numeric_limits<float>::infinity();
                 }

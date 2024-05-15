@@ -115,6 +115,7 @@ private:
 
     float jumpTime;
     float doubleJumpTime;
+    float directionalDoubleJumpTime;
 
     bool boosting;
     bool turboBoosting;

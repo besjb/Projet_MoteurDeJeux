@@ -50,25 +50,25 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 return;
             case GLFW_KEY_W:
                 car.setForwardAcceleration(car.getForwardAcceleration() + 14.0f);
-                car.setMovementAcceleration(car.getMovementAcceleration() - glm::vec3(0.0f, 0.0f, 12.0f));
+                car.setMovementAcceleration(car.getMovementAcceleration() - glm::vec3(0.0f, 0.0f, 15.0f));
                 return;
             case GLFW_KEY_S:
                 car.setForwardAcceleration(car.getForwardAcceleration() - 14.0f);
-                car.setMovementAcceleration(car.getMovementAcceleration() + glm::vec3(0.0f, 0.0f, 12.0f));
+                car.setMovementAcceleration(car.getMovementAcceleration() + glm::vec3(0.0f, 0.0f, 15.0f));
                 return;
             case GLFW_KEY_A:
                 car.setTurnSensitivity(car.getTurnSensitivity() + 1.0f);
-                car.setMovementAcceleration(car.getMovementAcceleration() + glm::vec3(0.0f, 12.0f, 0.0f));
+                car.setMovementAcceleration(car.getMovementAcceleration() + glm::vec3(0.0f, 15.0f, 0.0f));
                 return;
             case GLFW_KEY_D:
                 car.setTurnSensitivity(car.getTurnSensitivity() - 1.0f);
-                car.setMovementAcceleration(car.getMovementAcceleration() - glm::vec3(0.0f, 12.0f, 0.0f));
+                car.setMovementAcceleration(car.getMovementAcceleration() - glm::vec3(0.0f, 15.0f, 0.0f));
                 return;
             case GLFW_KEY_E:
-                car.setMovementAcceleration(car.getMovementAcceleration() + glm::vec3(12.0f, 0.0f, 0.0f));
+                car.setMovementAcceleration(car.getMovementAcceleration() + glm::vec3(15.0f, 0.0f, 0.0f));
                 return;
             case GLFW_KEY_Q:
-                car.setMovementAcceleration(car.getMovementAcceleration() - glm::vec3(12.0f, 0.0f, 0.0f));
+                car.setMovementAcceleration(car.getMovementAcceleration() - glm::vec3(15.0f, 0.0f, 0.0f));
                 return;
             case GLFW_KEY_UP:
                 //moveBackwardCamera();
@@ -107,25 +107,25 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         switch (key) {
             case GLFW_KEY_W:
                 car.setForwardAcceleration(car.getForwardAcceleration() - 14.0f);
-                car.setMovementAcceleration(car.getMovementAcceleration() + glm::vec3(0.0f, 0.0f, 12.0f));
+                car.setMovementAcceleration(car.getMovementAcceleration() + glm::vec3(0.0f, 0.0f, 15.0f));
                 return;
             case GLFW_KEY_S:
                 car.setForwardAcceleration(car.getForwardAcceleration() + 14.0f);
-                car.setMovementAcceleration(car.getMovementAcceleration() - glm::vec3(0.0f, 0.0f, 12.0f));
+                car.setMovementAcceleration(car.getMovementAcceleration() - glm::vec3(0.0f, 0.0f, 15.0f));
                 return;
             case GLFW_KEY_A:
                 car.setTurnSensitivity(car.getTurnSensitivity() - 1.0f);
-                car.setMovementAcceleration(car.getMovementAcceleration() - glm::vec3(0.0f, 12.0f, 0.0f));
+                car.setMovementAcceleration(car.getMovementAcceleration() - glm::vec3(0.0f, 15.0f, 0.0f));
                 return;
             case GLFW_KEY_D:
                 car.setTurnSensitivity(car.getTurnSensitivity() + 1.0f);
-                car.setMovementAcceleration(car.getMovementAcceleration() + glm::vec3(0.0f, 12.0f, 0.0f));
+                car.setMovementAcceleration(car.getMovementAcceleration() + glm::vec3(0.0f, 15.0f, 0.0f));
                 return;
             case GLFW_KEY_E:
-                car.setMovementAcceleration(car.getMovementAcceleration() - glm::vec3(12.0f, 0.0f, 0.0f));
+                car.setMovementAcceleration(car.getMovementAcceleration() - glm::vec3(15.0f, 0.0f, 0.0f));
                 return;
             case GLFW_KEY_Q:
-                car.setMovementAcceleration(car.getMovementAcceleration() + glm::vec3(12.0f, 0.0f, 0.0f));
+                car.setMovementAcceleration(car.getMovementAcceleration() + glm::vec3(15.0f, 0.0f, 0.0f));
                 return;
             case GLFW_KEY_UP:
                 //moveForwardCamera();
