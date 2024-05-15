@@ -23,6 +23,8 @@ public:
 
     Car& setAngularVelocity(const glm::vec3 angularVelocity);
 
+    Car& setMovementAcceleration(const glm::vec3& movementAcceleration);
+
     Car& setMovementAngle(const glm::vec3 movementAngle);
 
     Car& setForwardVelocity(float forwardVelocity);
@@ -45,6 +47,8 @@ public:
 
     glm::vec3 getAngularVelocity() const;
 
+    glm::vec3 getMovementAcceleration() const;
+
     glm::vec3 getMovementAngle() const;
 
     glm::vec3 getUpVector() const;
@@ -62,6 +66,14 @@ public:
     bool canDoubleJump() const;
 
     void doubleJump();
+
+    void startBoost();
+
+    void stopBoost();
+
+    bool isBoosting() const;
+
+    bool isTurboBoosting() const;
     
     float getForwardVelocity() const;
 
@@ -85,6 +97,7 @@ private:
     glm::vec3 velocity;
     glm::vec3 centrifuge;
     glm::vec3 angularVelocity;
+    glm::vec3 movementAcceleration;
     glm::vec3 movementAngle;
 
     float forwardVelocity;
@@ -96,5 +109,9 @@ private:
 
     float jumpTime;
     float doubleJumpTime;
+
+    bool boosting;
+    bool turboBoosting;
+    float turboBoostCooldown;
 
 };
