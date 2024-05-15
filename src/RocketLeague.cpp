@@ -3,6 +3,8 @@
 #include "MeshMaterial.hpp"
 #include "Mesh.hpp"
 
+extern bool switchCamera;
+
 RocketLeague::RocketLeague(float screenRatio) :
     car{scene.getRootTransformTree()->addChild(Transform().setScale(glm::vec3(0.01f)))}
 {
@@ -19,8 +21,10 @@ glm::vec3 RocketLeague::getGravity() const {
 
 void RocketLeague::update(float delta) {
     car.updateAnimations(delta);
-    //scene.getCamera().update(car.getPosition(), car.getRotation());
-    scene.getCamera().updateCamera2(balls[0].getPosition(), car.getPosition(), car.getRotation());
+    if(!switchCamera)
+        scene.getCamera().update(car.getPosition(), car.getRotation());
+    else
+        scene.getCamera().updateCamera2(balls[0].getPosition(), car.getPosition(), car.getRotation());
     updatePhysics(delta);
 }
 
