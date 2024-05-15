@@ -107,7 +107,7 @@ void RocketLeague::init(float screenRatio) {
     initModels();
 
     scene.getRootTransformTree()
-        ->addChild(Transform().setScale(glm::vec3(1.8f)))
+        ->addChild(Transform().setScale(glm::vec3(1.5f)))
         ->addObject(arenaModel);
 
     car.getTransformTree()
