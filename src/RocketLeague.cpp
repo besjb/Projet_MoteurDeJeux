@@ -19,7 +19,8 @@ glm::vec3 RocketLeague::getGravity() const {
 
 void RocketLeague::update(float delta) {
     car.updateAnimations(delta);
-    scene.getCamera().update(car.getPosition(), car.getRotation());
+    //scene.getCamera().update(car.getPosition(), car.getRotation());
+    scene.getCamera().updateCamera2(balls[0].getPosition(), car.getPosition(), car.getRotation());
     updatePhysics(delta);
 }
 
