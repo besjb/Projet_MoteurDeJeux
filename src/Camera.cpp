@@ -92,7 +92,7 @@ glm::mat4 Camera::getViewProjectionMatrix() const {
     return getProjectionMatrix() * getViewMatrix();
 }
 
-void Camera::update(const glm::vec3& carPosition, const glm::quat& carRotation) {
+/*void Camera::update(const glm::vec3& carPosition, const glm::quat& carRotation) {
     glm::vec3 offset = glm::vec3(-5.0f, 1.5f, 0.0f);
     
     glm::vec3 newPosition = carPosition + glm::rotate(carRotation, offset);
@@ -104,20 +104,46 @@ void Camera::update(const glm::vec3& carPosition, const glm::quat& carRotation) 
     
     setPosition(newPosition);
     setRotation(newRotation);
+}*/
+
+void Camera::update(const glm::vec3& carPosition, const glm::quat& carRotation) {
+    glm::vec3 offset = glm::vec3(-5.0f, 1.5f, 0.0f);
+
+    float carYaw = atan2(2.0f * (carRotation.y * carRotation.w + carRotation.x * carRotation.z),
+                         1.0f - 2.0f * (carRotation.y * carRotation.y + carRotation.x * carRotation.x));
+
+    if (carYaw > glm::pi<float>()) {
+        carYaw -= 2.0f * glm::pi<float>();
+    } else if (carYaw < -glm::pi<float>()) {
+        carYaw += 2.0f * glm::pi<float>();
+    }
+
+    glm::quat rotationCamera = glm::normalize(glm::angleAxis(carYaw, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+    glm::vec3 newPosition = carPosition + glm::rotate(rotationCamera, offset);
+
+    glm::vec3 forwardDirection = glm::normalize(glm::rotate(glm::inverse(rotationCamera), glm::vec3(1.0f, 0.0f, 0.0f)));
+
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+
+    glm::quat newRotation = glm::quatLookAt(-forwardDirection, up);
+
+    setPosition(newPosition);
+    setRotation(newRotation);
 }
+
+
+
 
 void Camera::updateCamera2(const glm::vec3& ballPosition, const glm::vec3& carPosition, const glm::quat& carRotation) {
     glm::vec3 offset = glm::vec3(-3.0f, 1.0f, 0.0f);
 
     glm::vec3 directionToBallFromCar = glm::normalize(ballPosition - carPosition);
     
-    // Apply offset to the direction vector
     glm::vec3 offsetDirectionToBallFromCar = directionToBallFromCar + offset;
     
-    // Rotate the direction vector to align with the car's orientation
     glm::vec3 rotatedDirectionToBallFromCar = glm::rotate(carRotation, offsetDirectionToBallFromCar);
-    
-    // Calculate the camera position by adding the rotated direction to the car's position
+
     glm::vec3 cameraPosition = carPosition + offsetDirectionToBallFromCar;
     
     glm::vec3 directionToBall = glm::normalize(ballPosition - cameraPosition);
