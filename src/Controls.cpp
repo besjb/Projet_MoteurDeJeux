@@ -85,6 +85,9 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             case GLFW_KEY_SPACE:
                 switchCamera = !switchCamera;
                 return;
+            case GLFW_KEY_LEFT_SHIFT:
+                car.startDrifting();
+                return;
             case GLFW_KEY_LEFT_CONTROL:
                 if (captureMouse) {
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -135,6 +138,9 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
                 return;
             case GLFW_KEY_RIGHT:
                 //moveRightCamera();
+                return;
+            case GLFW_KEY_LEFT_SHIFT:
+                car.stopDrifting();
                 return;
             default:
                 return;

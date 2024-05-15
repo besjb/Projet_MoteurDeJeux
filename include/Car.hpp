@@ -74,6 +74,12 @@ public:
     bool isBoosting() const;
 
     bool isTurboBoosting() const;
+
+    void startDrifting();
+
+    void stopDrifting();
+
+    bool isDrifting();
     
     float getForwardVelocity() const;
 
@@ -113,5 +119,7 @@ private:
     bool boosting;
     bool turboBoosting;
     float turboBoostCooldown;
+
+    bool drifting;
 
 };
